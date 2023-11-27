@@ -18,4 +18,6 @@ RUN git clone https://github.com/mikazlopes/d2drl.git && \
     cd d2drl && \
     pip install -r requirements.txt
 
-WORKDIR /d2rl
+EXPOSE 8120-8140
+
+WORKDIR /d2drl
