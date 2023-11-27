@@ -377,7 +377,7 @@ class DiabloIIGymEnv(gym.Env):
 
         
     def reset_sequence_noreward(self):
-        template_path = 'template_image.png'  # Provide the correct path to your template image
+        template_path = 'template_save.png'  # Provide the correct path to your template image
         template_img = cv2.imread(template_path, cv2.IMREAD_COLOR)
 
         menu_matched = False
