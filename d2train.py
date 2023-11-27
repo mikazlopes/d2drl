@@ -85,6 +85,8 @@ def train():
     # Set random seed for reproducibility
     set_random_seed(0)
 
+    ep_length = 2048 * 8
+
     callback = SimpleCallback()
     checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./checkpoints/', name_prefix='d2_model')
 

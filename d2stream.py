@@ -42,6 +42,7 @@ class D2GameState:
             'DamageMax': 0,
             'Defense': 0,
             'AttackRating': 0,
+            'VelocityPercent': 0,
         }
         self.previous_quests = {'Normal': [], 'Nightmare': [], 'Hell': []}
         self.host = '0.0.0.0'
