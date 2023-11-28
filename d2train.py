@@ -138,6 +138,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', help="Specify the device for training (e.g., 'cpu', 'cuda', 'mps')", default='cpu')
     args = parser.parse_args()
+    
     checkpoint_dir = './checkpoints/'
+    os.makedirs(checkpoint_dir, exist_ok=True)  # Ensure checkpoint directory exists
+
     latest_checkpoint = max([os.path.join(checkpoint_dir, f) for f in os.listdir(checkpoint_dir) if f.endswith('.zip')], default=None, key=os.path.getctime)
     train(latest_checkpoint, device=args.device)
