@@ -1,5 +1,5 @@
 # Use official Ubuntu image as a parent image
-FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
 # Set environment variables to suppress warnings and to avoid prompts
 ENV APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn \

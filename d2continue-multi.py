@@ -52,15 +52,15 @@ os.makedirs(log_dir, exist_ok=True)
 
 # List of server IPs and ports
 servers = [
-    #('172.16.171.131', 5000, 8121), #Windows11 1
-    #('172.16.171.130', 5000, 8122), #Windows11 2
-    #('172.16.171.128', 5000, 8123), #Windows11 3
-    #('172.16.171.129', 5000, 8124), #Windows11 4
-    ('192.168.150.178', 5000, 8125), #Windows11 5
+    ('router.titogang.org', 5001, 8121), #Windows11 1
+    ('router.titogang.org', 5002, 8122), #Windows11 2
+    ('router.titogang.org', 5003, 8123), #Windows11 3
+    ('router.titogang.org', 5004, 8124), #Windows11 4
+    #('192.168.150.178', 5000, 8125), #Windows11 5
     #('192.168.150.161', 5000, 8126), #Windows11 6
     # ('192.168.150.107', 5000, 8130), #check
-    ('192.168.150.236', 5000, 8129), #Asus
-    ('192.168.150.166', 5000, 8131), #Surface
+    #('192.168.150.236', 5000, 8129), #Asus
+    #('192.168.150.166', 5000, 8131), #Surface
     # Add more server IPs, game ports, and flask ports as needed
 ]
 

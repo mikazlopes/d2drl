@@ -34,7 +34,7 @@ class DiabloIIGymEnv(gym.Env):
         self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', 'Tab', None]
 
         # Now the action space for the keypress_index has to be one more than the length of self.key_mapping
-        self.action_space = spaces.MultiDiscrete([791, 551, 2, len(self.key_mapping)])
+        self.action_space = spaces.MultiDiscrete([791, 510, 2, len(self.key_mapping)])
 
         # Example observation space, which will be an image buffer mixed with data
         self.observation_space = spaces.Dict({
