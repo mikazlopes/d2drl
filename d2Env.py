@@ -7,6 +7,8 @@ from io import BytesIO
 from PIL import Image
 import cv2
 import logging
+import random
+import math
 from collections import deque
 from d2stream import D2GameState  # Import the class from d2stream.py
 
@@ -388,6 +390,9 @@ class DiabloIIGymEnv(gym.Env):
         template_img = cv2.imread(template_path, cv2.IMREAD_COLOR)
 
         menu_matched = False
+        attempt_count = 0
+        max_attempts = 5
+
         while not menu_matched:
             # Request a screenshot
             response = requests.get(f"{self.server_url}/screenshot400")
@@ -398,9 +403,24 @@ class DiabloIIGymEnv(gym.Env):
             menu_matched = self.template_match(screenshot_np, template_img)
             
             if not menu_matched:
-                # If not visible, send ESC and try again
+                attempt_count += 1
+                if attempt_count % max_attempts == 0:
+                    # Move mouse to a random position within 300 pixel radius
+                    angle = random.uniform(0, 2 * math.pi)
+                    radius = random.uniform(0, 300)
+                    x_offset = int(radius * math.cos(angle))
+                    y_offset = int(radius * math.sin(angle))
+                    center_x, center_y = 400, 300  # Assuming center of the screen
+                    new_x = center_x + x_offset
+                    new_y = center_y + y_offset
+                    self.send_mouse_move(new_x, new_y)
+                    self.send_mouse_click('left')
+                    time.sleep(1)  # Add delay after mouse move and click
+
+                # Send ESC keypress and try again
                 self.send_keypress('esc')
                 time.sleep(1)  # Add a delay to allow for the menu to appear
+
 
         # Proceed with the reset sequence since the menu text is visible
         self.send_mouse_move(400, 280)
