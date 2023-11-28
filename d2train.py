@@ -1,4 +1,5 @@
 import os
+import shutil
 import traceback
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -67,6 +68,28 @@ servers = [
     # Add more server IPs, game ports, and flask ports as needed
 ]
 
+class CustomCheckpointCallback(CheckpointCallback):
+    def __init__(self, save_freq, save_path, name_prefix='rl_model', verbose=0):
+        super(CustomCheckpointCallback, self).__init__(save_freq, save_path, name_prefix, verbose)
+
+    def _on_step(self) -> bool:
+        if self.n_calls % self.save_freq == 0:
+            # Call the parent method to save a new checkpoint
+            super(CustomCheckpointCallback, self)._on_step()
+
+            # Get all checkpoint files
+            checkpoints = [os.path.join(self.save_path, file) for file in os.listdir(self.save_path) if file.endswith('.zip')]
+
+            # Sort the checkpoints by modification time
+            checkpoints.sort(key=os.path.getmtime)
+
+            # Remove all but the most recent checkpoint
+            for checkpoint in checkpoints[:-1]:
+                os.remove(checkpoint)
+                print(f"Removed old checkpoint: {checkpoint}")
+
+        return True
+
 class SimpleCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(SimpleCallback, self).__init__(verbose)
@@ -88,7 +111,8 @@ def train():
     ep_length = 2048 * 8
 
     callback = SimpleCallback()
-    checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./checkpoints/', name_prefix='d2_model')
+    custom_checkpoint_callback = CustomCheckpointCallback(save_freq=1000, save_path='./checkpoints/', name_prefix='d2_model')
+
 
     # Define the policy_kwargs dict to pass to the PPO model
     policy_kwargs = dict(
@@ -104,16 +128,15 @@ def train():
         verbose=1,
         tensorboard_log="./d2_ppo_tensorboard/",
         device='mps',
-        batch_size=256,
-        n_steps=2048,
+        batch_size=512,
+        n_steps=ep_length,
         n_epochs=1,
         gamma=0.999,
     )
 
 
-    # Train the agent
     try:
-        model.learn(total_timesteps=int(1e8), callback=[callback, checkpoint_callback])
+        model.learn(total_timesteps=int(1e8), callback=[callback, custom_checkpoint_callback])
     except Exception as e:
         print(f"An error occurred during training: {e}")
         traceback.print_exc()  # This will print the full traceback
