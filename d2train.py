@@ -1,6 +1,6 @@
 import os
-import shutil
 import traceback
+import argparse
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
@@ -8,7 +8,6 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 import torch
 import torch.nn as nn
-import numpy as np
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from d2Env import DiabloIIGymEnv  # Import your custom environment
 
@@ -101,54 +100,44 @@ class SimpleCallback(BaseCallback):
             print(f"Step number: {self.step_count}")
         return True
 
-def train():
+
+def train(checkpoint_path=None, device='cpu'):
     # Create the vectorized environment
     env = SubprocVecEnv([make_env(ip, game_port, flask_port, i, log_dir) for i, (ip, game_port, flask_port) in enumerate(servers)])
-
-    # Set random seed for reproducibility
-    set_random_seed(0)
-
-    ep_length = 2048 * 8
+    set_random_seed(0)  # Set random seed for reproducibility
 
     callback = SimpleCallback()
-    custom_checkpoint_callback = CustomCheckpointCallback(save_freq=1000, save_path='./checkpoints/', name_prefix='d2_model')
-
+    custom_checkpoint_callback = CustomCheckpointCallback(save_freq=500, save_path='./checkpoints/', name_prefix='d2_model')
 
     # Define the policy_kwargs dict to pass to the PPO model
-    policy_kwargs = dict(
-        features_extractor_class=CustomCNN,
-        features_extractor_kwargs=dict(features_dim=512),  # You can adjust this dimension
-    )
+    policy_kwargs = dict(features_extractor_class=CustomCNN, features_extractor_kwargs=dict(features_dim=512))
+    ep_lenght = 2048 * 8
 
-    # Instantiate the agent
-    model = PPO(
-        "MultiInputPolicy",
-        env,
-        policy_kwargs=policy_kwargs,
-        verbose=1,
-        tensorboard_log="./d2_ppo_tensorboard/",
-        device='mps',
-        batch_size=512,
-        n_steps=ep_length,
-        n_epochs=1,
-        gamma=0.999,
-    )
+    # Check if a checkpoint exists and load it; otherwise, start a new model
+    if checkpoint_path and os.path.exists(checkpoint_path):
+        model = PPO.load(checkpoint_path, env=env, device=device, tensorboard_log="./d2_ppo_tensorboard/")
+        model.set_env(env)  # Set the environment for the loaded model
+        print(f"Continuing training from checkpoint: {checkpoint_path}")
+    else:
+        model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device='mps', batch_size=512, n_steps=ep_lenght, n_epochs=1, gamma=0.999)
+        print("Starting new training session")
 
-
+    # Train the agent
     try:
-        model.learn(total_timesteps=int(1e8), callback=[callback, custom_checkpoint_callback])
+        model.learn(total_timesteps=int(1e8), callback=[callback, custom_checkpoint_callback], reset_num_timesteps=not checkpoint_path)
     except Exception as e:
         print(f"An error occurred during training: {e}")
         traceback.print_exc()  # This will print the full traceback
 
     # Save the agent
     model.save("d2_ppo_model")
-
-    # Close the environment
-    env.close()
-
-    # Output to show training has finished
+    env.close()  # Close the environment
     print("Training finished!")
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', help="Specify the device for training (e.g., 'cpu', 'cuda', 'mps')", default='cpu')
+    args = parser.parse_args()
+    checkpoint_dir = './checkpoints/'
+    latest_checkpoint = max([os.path.join(checkpoint_dir, f) for f in os.listdir(checkpoint_dir) if f.endswith('.zip')], default=None, key=os.path.getctime)
+    train(latest_checkpoint, device=args.device)
