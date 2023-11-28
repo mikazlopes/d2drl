@@ -51,14 +51,21 @@ class DiabloIIGymEnv(gym.Env):
         # Flask server URL
         self.server_url = server_url
     
-    def send_request(self, url, data):
-        try:
-            response = requests.post(url, json=data)
-            response.raise_for_status()  # This will raise an exception for HTTP errors
-            return response.json().get('success', False)
-        except requests.RequestException as e:
-            print(f"Request failed: {e}")
-            return False
+    def send_request(self, url, data, max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, json=data)
+                response.raise_for_status()  # This will raise an exception for HTTP errors
+                return response.json().get('success', False)
+            except requests.RequestException as e:
+                print(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:
+                    # If this was the last attempt, re-raise the exception
+                    raise
+                time.sleep(1)  # Optional: sleep for a bit before retrying
+
+        # If all retries fail, this will never be reached due to the raise in the except block
+        return False
 
     def step(self, action):
 
