@@ -64,7 +64,7 @@ servers = [
     ('router.titogang.org', 5006, 8126), #Windows11 6
     # ('192.168.150.107', 5000, 8130), #check
     ('router.titogang.org', 5009, 8129), #Asus
-    ('router.titogang.org', 5010, 8130), #Surface
+    #('router.titogang.org', 5010, 8130), #Surface
     # Add more server IPs, game ports, and flask ports as needed
 ]
 
