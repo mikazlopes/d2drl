@@ -38,7 +38,7 @@ async def screenshot():
     window = diablo_window[0]
     x, y, width, height = window.left, window.top, window.width, window.height
     screenshot = ImageGrab.grab(bbox=(x, y, x+width, y+height))
-    screenshot = screenshot.resize((300, 225))
+    screenshot = screenshot.resize((400, 300))
     img_byte_arr = io.BytesIO()
     screenshot.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
@@ -52,7 +52,7 @@ async def keypress():
     data = request.get_json()
     key = data['key']
     pyautogui.keyDown(key)
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.05)
     pyautogui.keyUp(key)
     return jsonify(success=True), 200
 
@@ -78,5 +78,3 @@ async def mouse():
         pyautogui.scroll(amount)
     return jsonify(success=True), 200
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
