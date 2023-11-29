@@ -27,8 +27,8 @@ servers = [
     ('192.168.150.135', 5000, 8122), #Windows11 2
     ('192.168.150.212', 5000, 8123), #Windows11 3
     ('192.168.150.154', 5000, 8124), #Windows11 4
-    #('router.titogang.org', 5005, 8125), #Windows11 5
-    #('router.titogang.org', 5006, 8126), #Windows11 6
+    ('192.168.150.178', 5000, 8125), #Windows11 5
+    ('192.168.150.161', 5000, 8126), #Windows11 6
     #('router.titogang.org', 5007, 8127), #Windows10 7
     #('router.titogang.org', 5008, 8128), #Windows10 8
     #('router.titogang.org', 5009, 8129), #Asus

@@ -323,7 +323,7 @@ class DiabloIIGymEnv(gym.Env):
         menu_matched = False
         while not menu_matched:
             # Request a screenshot
-            response = requests.get(f"{self.server_url}/screenshot400")
+            response = requests.get(f"{self.server_url}/screenshot")
             screenshot = Image.open(BytesIO(response.content))
             screenshot_np = np.array(screenshot)
 
@@ -386,7 +386,7 @@ class DiabloIIGymEnv(gym.Env):
 
         while not menu_matched:
             # Request a screenshot
-            response = requests.get(f"{self.server_url}/screenshot400")
+            response = requests.get(f"{self.server_url}/screenshot")
             screenshot = Image.open(BytesIO(response.content))
             screenshot_np = np.array(screenshot)
 
