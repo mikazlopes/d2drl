@@ -40,7 +40,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Example observation space, which will be an image buffer mixed with data
         self.observation_space = spaces.Dict({
-            "image": spaces.Box(low=0, high=255, shape=(12, 300, 400), dtype=np.uint8),
+            "image": spaces.Box(low=0, high=255, shape=(300, 400, 3), dtype=np.uint8),
             "vector": spaces.Box(low=-np.inf, high=np.inf, shape=(25,), dtype=np.float32)  # Example shape (10,)
         })
 
@@ -113,23 +113,14 @@ class DiabloIIGymEnv(gym.Env):
             print("Mouse click action failed, skipping to the next action")
 
 
-        # Get a screenshot for the observation and append it to the frame stack
+        # Get a screenshot for the observation
         response = requests.get(f"{self.server_url}/screenshot")
         image = Image.open(BytesIO(response.content))
-        frame = np.array(image)
+        vector_img = np.array(image)
 
-        # Replace the oldest frame
-        self.frame_stack.append(frame)
-        if len(self.frame_stack) > 4:
-            self.frame_stack.popleft()
-
-        # Check and stack frames
-        if all(frame.shape == (300, 400, 3) for frame in self.frame_stack):
-            stacked_frames = np.concatenate([frame for frame in self.frame_stack], axis=2)  # Shape should be (300, 400, 12)
-            stacked_frames = np.transpose(stacked_frames, (2, 0, 1))  # Transpose to (12, 300, 400)
-        else:
-            raise ValueError("Step: Frame shapes do not match expected dimensions.")
-
+        # Check the observation shape
+        if vector_img.shape != (300, 400, 3):
+            raise ValueError("Step: Observation shape does not match expected dimensions.")
         
         # Get the updated game state after the action
         updated_state = self.d2_game_state.get_state() 
@@ -164,7 +155,7 @@ class DiabloIIGymEnv(gym.Env):
         ])
 
         observation = {
-        "image": stacked_frames,  # The image from the screenshot
+        "image": vector_img,  # The image from the screenshot
         "vector": vector_obs,         # The vector of scalar values
         }
 
@@ -482,23 +473,14 @@ class DiabloIIGymEnv(gym.Env):
 
         self.d2_game_state.game_state['Areas'] = []
 
-       # Clear the frame stack
-        self.frame_stack.clear()
-
-        # Fetch the initial screenshot
+       # Get a screenshot for the observation
         response = requests.get(f"{self.server_url}/screenshot")
-        initial_image = Image.open(BytesIO(response.content))
-        initial_frame = np.array(initial_image)
+        image = Image.open(BytesIO(response.content))
+        vector_img = np.array(image)
 
-        # Check and fill the frame stack
-        if initial_frame.shape == (300, 400, 3):
-            for _ in range(4):
-                self.frame_stack.append(initial_frame)
-
-            stacked_frames = np.concatenate([frame for frame in self.frame_stack], axis=2)  # Shape should be (300, 400, 12)
-            stacked_frames = np.transpose(stacked_frames, (2, 0, 1))  # Transpose to (12, 300, 400)
-        else:
-            raise ValueError("Initial frame shape does not match expected dimensions.")
+        # Check the observation shape
+        if vector_img.shape != (300, 400, 3):
+            raise ValueError("Step: Observation shape does not match expected dimensions.")
         
         # Get the updated game state after the action
         updated_state = self.d2_game_state.get_state() 
@@ -533,7 +515,7 @@ class DiabloIIGymEnv(gym.Env):
         ])
 
         observation = {
-        "image": stacked_frames,  # The image from the screenshot
+        "image": vector_img,  # The image from the screenshot
         "vector": vector_obs,         # The vector of scalar values
         }
 

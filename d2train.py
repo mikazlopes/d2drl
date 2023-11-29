@@ -6,39 +6,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
-import torch
-import torch.nn as nn
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from d2Env import DiabloIIGymEnv  # Import your custom environment
-
-
-class CustomCNN(BaseFeaturesExtractor):
-    def __init__(self, observation_space, features_dim=64):
-        super(CustomCNN, self).__init__(observation_space, features_dim)
-        
-        # CNN layers
-        self.cnn = nn.Sequential(
-            nn.Conv2d(12, 32, kernel_size=8, stride=4, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # Sample a dummy input from the observation space
-        dummy_input = observation_space['image'].sample()
-        dummy_input_tensor = torch.as_tensor(dummy_input[None]).float()  # Add a batch dimension
-
-        with torch.no_grad():
-            n_flatten = self.cnn(dummy_input_tensor).shape[1]
-
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
-
-    def forward(self, observations):
-        return self.linear(self.cnn(observations['image']))
-
 
 
 # Function to create a new instance of the environment
@@ -108,10 +76,7 @@ def train(checkpoint_path=None, device='cpu'):
 
     callback = SimpleCallback()
     custom_checkpoint_callback = CustomCheckpointCallback(save_freq=500, save_path='./checkpoints/', name_prefix='d2_model')
-
-    # Define the policy_kwargs dict to pass to the PPO model
-    policy_kwargs = dict(features_extractor_class=CustomCNN, features_extractor_kwargs=dict(features_dim=512))
-    ep_lenght = 2048 * 8
+    ep_lenght = 512 * 8
 
     # Check if a checkpoint exists and load it; otherwise, start a new model
     if checkpoint_path and os.path.exists(checkpoint_path):
@@ -119,7 +84,7 @@ def train(checkpoint_path=None, device='cpu'):
         model.set_env(env)  # Set the environment for the loaded model
         print(f"Continuing training from checkpoint: {checkpoint_path}")
     else:
-        model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device=device, batch_size=512, n_steps=ep_lenght, n_epochs=1, gamma=0.999)
+        model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device=device, batch_size=512, n_steps=ep_lenght, n_epochs=1, gamma=0.999)
         print("Starting new training session")
 
     # Train the agent
@@ -138,7 +103,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', help="Specify the device for training (e.g., 'cpu', 'cuda', 'mps')", default='cpu')
     args = parser.parse_args()
-    
+
     checkpoint_dir = './checkpoints/'
     os.makedirs(checkpoint_dir, exist_ok=True)  # Ensure checkpoint directory exists
 
