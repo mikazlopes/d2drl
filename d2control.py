@@ -44,6 +44,32 @@ async def screenshot():
     img_byte_arr.seek(0)
     return Response(img_byte_arr, mimetype='image/png')
 
+@app.route('/screenshotreset', methods=['GET'])
+async def screenshot400():
+    if not focus_on_diablo_window():
+        return jsonify(error="Diablo II window not found"), 400
+    diablo_window = gw.getWindowsWithTitle("Diablo II") 
+
+    window = diablo_window[0]
+
+    # Get the window's coordinates
+    x, y, width, height = window.left, window.top, window.width, window.height
+    
+    # Capture the screenshot
+    screenshot = ImageGrab.grab(bbox=(x, y, x+width, y+height))
+    
+    # Process the image (e.g., convert to grayscale)
+    screenshot = screenshot.resize((400, 300))
+    screenshot_gray = screenshot.convert('L')
+
+    # Save to a BytesIO object
+    img_byte_arr = io.BytesIO()
+    screenshot_gray.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)  # Go to the start of the BytesIO object
+
+    # Send the image as a response
+    return Response(img_byte_arr, mimetype='image/png')
+
 @app.route('/keypress', methods=['POST'])
 async def keypress():
     if not await focus_on_diablo_window():
