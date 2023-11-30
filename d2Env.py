@@ -316,7 +316,6 @@ class DiabloIIGymEnv(gym.Env):
     def reset_sequence_dead(self):
         
         self.send_keypress('esc')
-
         template_path = 'template_save.png'  # Provide the correct path to your template image
         template_img = cv2.imread(template_path, cv2.IMREAD_COLOR)
 
@@ -352,7 +351,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_keypress('Enter')
         time.sleep(2)
 
-    def template_match(self, screenshot_np, template_np, threshold=0.35):
+    def template_match(self, screenshot_np, template_np, threshold=0.4):
         # If the template image is not grayscale, convert it
         if len(template_np.shape) == 3:
             template_gray = cv2.cvtColor(template_np, cv2.COLOR_BGR2GRAY)
@@ -382,7 +381,7 @@ class DiabloIIGymEnv(gym.Env):
 
         menu_matched = False
         attempt_count = 0
-        max_attempts = 5
+        max_attempts = 3
 
         while not menu_matched:
             # Request a screenshot
@@ -396,17 +395,13 @@ class DiabloIIGymEnv(gym.Env):
             if not menu_matched:
                 attempt_count += 1
                 if attempt_count % max_attempts == 0:
-                    # Move mouse to a random position within 300 pixel radius
-                    angle = random.uniform(0, 2 * math.pi)
-                    radius = random.uniform(0, 300)
-                    x_offset = int(radius * math.cos(angle))
-                    y_offset = int(radius * math.sin(angle))
-                    center_x, center_y = 400, 300  # Assuming center of the screen
-                    new_x = center_x + x_offset
-                    new_y = center_y + y_offset
-                    self.send_mouse_move(new_x, new_y)
+                
+                    #move char to different location
+                    numbers = [20,500]
+                    chosen_number = random.choice(numbers)
+                    self.send_mouse_move(400, chosen_number)
                     self.send_mouse_click('left')
-                    time.sleep(1)  # Add delay after mouse move and click
+                    time.sleep(3)  # Add delay after mouse move and click
 
                 # Send ESC keypress and try again
                 self.send_keypress('esc')
