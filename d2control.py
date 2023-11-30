@@ -11,6 +11,8 @@ from PIL import ImageGrab, Image
 
 app = Flask(__name__)
 
+pyautogui.FAILSAFE = False
+
 async def focus_on_diablo_window():
     window_name = "Diablo II"
     handle = win32gui.FindWindow(None, window_name)
@@ -45,8 +47,8 @@ async def screenshot():
     return Response(img_byte_arr, mimetype='image/png')
 
 @app.route('/screenshotreset', methods=['GET'])
-async def screenshot400():
-    if not focus_on_diablo_window():
+async def screenshotreset():
+    if not await focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
     diablo_window = gw.getWindowsWithTitle("Diablo II") 
 
@@ -103,4 +105,3 @@ async def mouse():
         amount = data['amount']
         pyautogui.scroll(amount)
     return jsonify(success=True), 200
-
