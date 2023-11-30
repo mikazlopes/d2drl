@@ -46,7 +46,7 @@ async def screenshot():
 
 @app.route('/screenshotreset', methods=['GET'])
 async def screenshot400():
-    if not focus_on_diablo_window():
+    if not await focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
     diablo_window = gw.getWindowsWithTitle("Diablo II") 
 
