@@ -104,3 +104,33 @@ async def mouse():
         pyautogui.scroll(amount)
     return jsonify(success=True), 200
 
+@app.route('/combined_action', methods=['POST'])
+async def combined_action():
+    if not await focus_on_diablo_window():
+        return jsonify(error="Diablo II window not found"), 400
+
+    data = request.get_json()
+
+    # Handle mouse move
+    mouse_move_data = data.get('mouse_move_action')
+    if mouse_move_data:
+        x, y = mouse_move_data['x'], mouse_move_data['y']
+        pyautogui.moveTo(x, y)
+
+    # Handle mouse click
+    mouse_click_data = data.get('mouse_click_action')
+    if mouse_click_data:
+        button = mouse_click_data['button']
+        pyautogui.click(button=button)
+
+    # Handle key press
+    keypress_data = data.get('keypress_action')
+    if keypress_data:
+        key = keypress_data['key']
+        pyautogui.keyDown(key)
+        await asyncio.sleep(0.05)
+        pyautogui.keyUp(key)
+
+    return jsonify(success=True), 200
+
+

@@ -74,7 +74,7 @@ class DiabloIIGymEnv(gym.Env):
         self.step_counter += 1
         
         current_state = self.d2_game_state.get_state()
-        
+
         # Extract the discrete actions from the MultiDiscrete space
         mouse_x, mouse_y, mouse_click, keypress_index = action
 
@@ -82,35 +82,67 @@ class DiabloIIGymEnv(gym.Env):
         mouse_x_action = int(10 + mouse_x.item())
         mouse_y_action = int(30 + mouse_y.item())
         mouse_click_action = 'left' if mouse_click.item() == 0 else 'right'
-        
-        # Handle the action for keypress
-        keypress_index = action[3]  # This gets the index for the keypress action
-        keypress_action_key = self.key_mapping[keypress_index]  # This can now be None
 
-        if keypress_action_key is not None:
-            # Perform the key press
-            keypress_action = {
-                "key": keypress_action_key,
-                "action": "press"
+        # Prepare the combined action
+        combined_action = {
+            'mouse_move_action': {
+                "x": mouse_x_action,
+                "y": mouse_y_action
+            },
+            'mouse_click_action': {
+                "button": mouse_click_action
             }
-            if not self.send_request(f"{self.server_url}/keypress", keypress_action):
-                print("Keypress action failed, skipping to the next action")
-
-        # Now create the JSON payloads with native Python types for mouse actions
-        mouse_action = {
-            "action": "move",
-            "x": mouse_x_action,
-            "y": mouse_y_action
         }
-        if not self.send_request(f"{self.server_url}/mouse", mouse_action):
-            print("Mouse move action failed, skipping to the next action")
 
-        click_action = {
-            "action": "click",
-            "button": mouse_click_action
-        }
-        if not self.send_request(f"{self.server_url}/mouse", click_action):
-            print("Mouse click action failed, skipping to the next action")
+        # Add keypress action if applicable
+        keypress_index = action[3]
+        keypress_action_key = self.key_mapping[keypress_index]
+        if keypress_action_key is not None:
+            combined_action['keypress_action'] = {
+                "key": keypress_action_key
+            }
+
+        # Send the combined request
+        if not self.send_request(f"{self.server_url}/combined_action", combined_action):
+            print("Combined action failed")
+
+        
+        # # Extract the discrete actions from the MultiDiscrete space
+        # mouse_x, mouse_y, mouse_click, keypress_index = action
+
+        # # Convert NumPy int64 types to native Python int using .item()
+        # mouse_x_action = int(10 + mouse_x.item())
+        # mouse_y_action = int(30 + mouse_y.item())
+        # mouse_click_action = 'left' if mouse_click.item() == 0 else 'right'
+        
+        # # Handle the action for keypress
+        # keypress_index = action[3]  # This gets the index for the keypress action
+        # keypress_action_key = self.key_mapping[keypress_index]  # This can now be None
+
+        # if keypress_action_key is not None:
+        #     # Perform the key press
+        #     keypress_action = {
+        #         "key": keypress_action_key,
+        #         "action": "press"
+        #     }
+        #     if not self.send_request(f"{self.server_url}/keypress", keypress_action):
+        #         print("Keypress action failed, skipping to the next action")
+
+        # # Now create the JSON payloads with native Python types for mouse actions
+        # mouse_action = {
+        #     "action": "move",
+        #     "x": mouse_x_action,
+        #     "y": mouse_y_action
+        # }
+        # if not self.send_request(f"{self.server_url}/mouse", mouse_action):
+        #     print("Mouse move action failed, skipping to the next action")
+
+        # click_action = {
+        #     "action": "click",
+        #     "button": mouse_click_action
+        # }
+        # if not self.send_request(f"{self.server_url}/mouse", click_action):
+        #     print("Mouse click action failed, skipping to the next action")
 
 
         # Get a screenshot for the observation
@@ -315,9 +347,9 @@ class DiabloIIGymEnv(gym.Env):
 
     def reset_sequence_dead(self):
         
-        self.send_keypress('esc')
         template_path = 'template_save.png'  # Provide the correct path to your template image
         template_img = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        self.send_keypress('esc')
 
         menu_matched = False
         while not menu_matched:
@@ -351,7 +383,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_keypress('Enter')
         time.sleep(2)
 
-    def template_match(self, screenshot_np, template_np, threshold=0.4):
+    def template_match(self, screenshot_np, template_np, threshold=0.3):
         # If the template image is not grayscale, convert it
         if len(template_np.shape) == 3:
             template_gray = cv2.cvtColor(template_np, cv2.COLOR_BGR2GRAY)

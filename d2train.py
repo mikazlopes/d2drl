@@ -27,14 +27,14 @@ servers = [
     ('192.168.150.135', 5000, 8122), #Windows11 2
     #('192.168.150.212', 5000, 8123), #Windows11 3
     #('192.168.150.154', 5000, 8124), #Windows11 4
-    ('192.168.150.178', 5000, 8125), #Windows11 5
+    #('192.168.150.178', 5000, 8125), #Windows11 5
     #('192.168.150.161', 5000, 8126), #Windows11 6
-    #('router.titogang.org', 5007, 8127), #Windows10 7
+    #('192.168.150.156', 5000, 8127), #Windows10 7
     #('router.titogang.org', 5008, 8128), #Windows10 8
-    ('192.168.150.236', 5000, 8129), #Asus
+    #('192.168.150.236', 5000, 8129), #Asus Bare Metal
     #('router.titogang.org', 5010, 8130), #Surface
     #('router.titogang.org', 5011, 8131), #Windows10 11
-    #('router.titogang.org', 5012, 8132), #Windows10 11
+    #('192.168.150.220', 5000, 8132), #Mac Intel Bare Metal
     # Add more server IPs, game ports, and flask ports as needed
 ]
 
