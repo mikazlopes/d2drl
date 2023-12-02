@@ -9,7 +9,6 @@ import cv2
 import logging
 import random
 import math
-from collections import deque
 from d2stream import D2GameState  # Import the class from d2stream.py
 
 # Setup logging at the start of your script
@@ -30,7 +29,6 @@ class DiabloIIGymEnv(gym.Env):
         self.cumulative_reward = 0
         self.steps_since_last_reward = 0
         self.step_counter = 0
-        self.frame_stack = deque(maxlen=4)  # Stores the last 4 frames
 
         # Add a None value to represent no keystroke
         self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', 'Tab', None]
@@ -43,12 +41,6 @@ class DiabloIIGymEnv(gym.Env):
             "image": spaces.Box(low=0, high=255, shape=(300, 400, 3), dtype=np.uint8),
             "vector": spaces.Box(low=-np.inf, high=np.inf, shape=(25,), dtype=np.float32)  # Example shape (10,)
         })
-
-        # Initialize frame stack with four black frames
-        initial_frame = np.zeros((300, 400, 3), dtype=np.uint8)
-        for _ in range(4):
-            self.frame_stack.append(initial_frame)
-
 
         # Flask server URL
         self.server_url = server_url
@@ -315,7 +307,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Penalty for death
         if new_state.get('IsDead', False):
-            reward -= 500
+            reward -= 200
 
         # Reward for experience gain
         if new_state.get('Experience', 0) > old_state.get('Experience', 0):
