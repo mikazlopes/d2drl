@@ -23,18 +23,18 @@ os.makedirs(log_dir, exist_ok=True)
 
 # List of server IPs and ports
 servers = [
-    ('router.titogang.org', 5000, 8121), #Windows11 1
-    ('router.titogang.org', 5000, 8122), #Windows11 2
-    ('router.titogang.org', 5000, 8123), #Windows11 3
-    ('router.titogang.org', 5000, 8124), #Windows11 4
-    ('router.titogang.org', 5000, 8125), #Windows11 5
-    ('router.titogang.org', 5000, 8126), #Windows11 6
+    ('router.titogang.org', 5001, 8121), #Windows11 1
+    ('router.titogang.org', 5002, 8122), #Windows11 2
+    ('router.titogang.org', 5003, 8123), #Windows11 3
+    ('router.titogang.org', 5004, 8124), #Windows11 4
+    ('router.titogang.org', 5005, 8125), #Windows11 5
+    ('router.titogang.org', 5006, 8126), #Windows11 6
     #('192.168.150.156', 5000, 8127), #Windows10 7
     #('router.titogang.org', 5008, 8128), #Windows10 8
-    ('router.titogang.org', 5000, 8129), #Asus Bare Metal
-    ('router.titogang.org', 5000, 8130), #Surface
+    ('router.titogang.org', 5009, 8129), #Asus Bare Metal
+    ('router.titogang.org', 5010, 8130), #Surface
     #('router.titogang.org', 5011, 8131), #Windows10 11
-    ('router.titogang.org', 5000, 8132), #Mac Intel Bare Metal
+    ('router.titogang.org', 5012, 8132), #Mac Intel Bare Metal
     # Add more server IPs, game ports, and flask ports as needed
 ]
 
