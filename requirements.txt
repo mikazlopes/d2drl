@@ -62,6 +62,9 @@ typing_extensions
 tzdata
 urllib3
 Werkzeug
+setuptools==65.5.0
+pip==21
+wheel==0.38.0
 
 # DreamverV3 reqs
 
