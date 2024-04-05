@@ -41,8 +41,8 @@ def main():
 
     # List of server IPs and ports
     servers = [
-        ('192.168.150.214', 5012, 8132),
-        ('192.168.150.139', 5009, 8129),
+        ('router.titogang.org', 5012, 8132),
+        ('router.titogang.org', 5009, 8129),
     ]
 
     # Wrap each environment instance with FromGym

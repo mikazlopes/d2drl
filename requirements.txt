@@ -68,8 +68,8 @@ Werkzeug==3.0.1
 cloudpickle
 crafter
 gym==0.21.0
-jax
-jaxlib
+#jax
+#jaxlib
 numpy
 optax
 rich
