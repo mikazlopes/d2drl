@@ -16,8 +16,6 @@ RUN apt-get update && apt-get install -y \
 # Clone your training-farm repository and install additional requirements
 RUN git clone https://github.com/mikazlopes/d2drl.git && \
     cd d2drl && \
-    pip install -r requirements.txt && \
-    cd dreamerv3 && \
     pip install -r requirements.txt
 
 EXPOSE 8120-8140
