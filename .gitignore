@@ -2,7 +2,7 @@
 .history/
 checkpoints/
 d2_ppo_tensorboard/
-logs/*.csv
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
