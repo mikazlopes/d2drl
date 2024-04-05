@@ -70,7 +70,7 @@ wheel==0.38.0
 
 cloudpickle
 #crafter
-gym==0.21.0
+#gym==0.21.0
 #jax
 #jaxlib
 numpy
