@@ -62,7 +62,7 @@ typing_extensions
 tzdata
 urllib3
 Werkzeug
-setuptools==65.5.0
+setuptools==65.5.1
 pip==21
 wheel==0.38.0
 
