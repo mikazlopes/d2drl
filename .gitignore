@@ -167,3 +167,4 @@ cython_debug/
 
 d2_ppo_tensorboard/.DS_Store
 onstart.sh
+logdir/
