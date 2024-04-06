@@ -47,7 +47,7 @@ RUN pip3 install bsuite
 RUN pip install --upgrade "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip3 install jaxlib
 RUN pip3 install tensorflow_probability
-RUN pip3 install optax==0.1.8
+RUN pip3 install optax==0.1.3
 RUN pip3 install tensorflow-cpu
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION 0.8
 
@@ -62,5 +62,7 @@ ENV GCS_WRITE_REQUEST_TIMEOUT_SECS=600
 RUN pip3 install numpy cloudpickle ruamel.yaml rich zmq msgpack
 COPY . /embodied
 RUN chown -R 1000:root /embodied && chmod -R 775 /embodied
+
+EXPOSE 8120-8140
 
 WORKDIR embodied

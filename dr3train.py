@@ -40,27 +40,27 @@ def main():
  
     ### Settings for multiple envs
     # # List of server IPs and ports
-    # servers = [
-    #     ('router.titogang.org', 5012, 8132),
-    #     ('router.titogang.org', 5009, 8129),
-    # ]
+    servers = [
+        ('router.titogang.org', 5010, 8130),
+        ('router.titogang.org', 5009, 8129),
+    ]
 
-    # # Wrap each environment instance with FromGym
-    # envs = [
-    #     FromGym(
-    #         DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
-    #         obs_key='image'
-    #     ) for ip, game_port, flask_port in servers
-    # ]
+    # Wrap each environment instance with FromGym
+    envs = [
+        FromGym(
+            DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
+            obs_key='image'
+        ) for ip, game_port, flask_port in servers
+    ]
     
 
     # Wrap the batch of environments for DreamerV3
-    # env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
+    env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
 
     ###Settings for single env
-    env = FromGym(DiabloIIGymEnv(server_url='http://router.titogang.org:5009', flask_port=8129), obs_key='image')
-    env = dreamerv3.wrap_env(env, config)
-    env = embodied.BatchEnv(env, parallel=False)
+    # env = FromGym(DiabloIIGymEnv(server_url='http://router.titogang.org:5009', flask_port=8129), obs_key='image')
+    # env = dreamerv3.wrap_env(env, config)
+    # env = embodied.BatchEnv([env], parallel=False)
     
     
     agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
