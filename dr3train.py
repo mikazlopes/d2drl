@@ -15,7 +15,7 @@ def main():
 
     # Configure DreamerV3
     config = embodied.Config(dreamerv3.configs['defaults'])
-    config = config.update(dreamerv3.configs['xlarge'])
+    config = config.update(dreamerv3.configs['medium'])
     config = config.update({
         'logdir': '/d2rl/logdir/run1',
         'run.train_ratio': 64,
@@ -38,7 +38,7 @@ def main():
         embodied.logger.TensorBoardOutput(logdir),
     ])
  
-
+    ### Settings for multiple envs
     # # List of server IPs and ports
     # servers = [
     #     ('router.titogang.org', 5012, 8132),
@@ -57,9 +57,12 @@ def main():
     # Wrap the batch of environments for DreamerV3
     # env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
 
+    ###Settings for single env
     env = FromGym(DiabloIIGymEnv(server_url='http://router.titogang.org:5009', flask_port=8129), obs_key='image')
     env = dreamerv3.wrap_env(env, config)
     env = embodied.BatchEnv(env, parallel=False)
+    
+    
     agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
     replay = embodied.replay.Uniform(config.batch_length, config.replay_size, logdir / 'replay')
     args = embodied.Config(**config.run, logdir=config.logdir, batch_steps=config.batch_size * config.batch_length)
