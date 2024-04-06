@@ -39,24 +39,27 @@ def main():
     ])
  
 
-    # List of server IPs and ports
-    servers = [
-        ('router.titogang.org', 5012, 8132),
-        ('router.titogang.org', 5009, 8129),
-    ]
+    # # List of server IPs and ports
+    # servers = [
+    #     ('router.titogang.org', 5012, 8132),
+    #     ('router.titogang.org', 5009, 8129),
+    # ]
 
-    # Wrap each environment instance with FromGym
-    envs = [
-        FromGym(
-            DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
-            obs_key='image'
-        ) for ip, game_port, flask_port in servers
-    ]
+    # # Wrap each environment instance with FromGym
+    # envs = [
+    #     FromGym(
+    #         DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
+    #         obs_key='image'
+    #     ) for ip, game_port, flask_port in servers
+    # ]
     
 
     # Wrap the batch of environments for DreamerV3
-    env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
+    # env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
 
+    env = FromGym(DiabloIIGymEnv(server_url='http://router.titogang.org:5009', flask_port=8129), obs_key='image')
+    env = dreamerv3.wrap_env(env, config)
+    env = embodied.BatchEnv(env, parallel=False)
     agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
     replay = embodied.replay.Uniform(config.batch_length, config.replay_size, logdir / 'replay')
     args = embodied.Config(**config.run, logdir=config.logdir, batch_steps=config.batch_size * config.batch_length)

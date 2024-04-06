@@ -15,12 +15,15 @@
 # tensorboard --logdir ~/logdir
 
 # System
-FROM nvidia/cuda:11.4.2-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
+
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/San_Francisco
-ENV PYTHONUNBUFFERED 1
-ENV PIP_DISABLE_PIP_VERSION_CHECK 1
-ENV PIP_NO_CACHE_DIR 1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_CACHE_DIR=1
+
+# Install Python 3.8 and other dependencies
 RUN apt-get update && apt-get install -y \
   ffmpeg git python3-pip vim libglew-dev \
   x11-xserver-utils xvfb \
@@ -30,10 +33,10 @@ RUN pip3 install --upgrade pip
 # Envs
 ENV MUJOCO_GL egl
 ENV DMLAB_DATASET_PATH /dmlab_data
-COPY scripts scripts
-RUN sh scripts/install-dmlab.sh
-RUN sh scripts/install-atari.sh
-RUN sh scripts/install-minecraft.sh
+COPY embodied/scripts scripts
+# RUN sh scripts/install-dmlab.sh
+# RUN sh scripts/install-atari.sh
+# RUN sh scripts/install-minecraft.sh
 ENV NUMBA_CACHE_DIR=/tmp
 RUN pip3 install crafter
 RUN pip3 install dm_control
@@ -41,10 +44,10 @@ RUN pip3 install robodesk
 RUN pip3 install bsuite
 
 # Agent
-RUN pip3 install jax[cuda11_cudnn82] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+RUN pip install --upgrade "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip3 install jaxlib
 RUN pip3 install tensorflow_probability
-RUN pip3 install optax
+RUN pip3 install optax==0.1.8
 RUN pip3 install tensorflow-cpu
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION 0.8
 
