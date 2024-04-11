@@ -3,6 +3,7 @@
 checkpoints/
 d2_ppo_tensorboard/
 logs/
+videos/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

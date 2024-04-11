@@ -98,45 +98,6 @@ class DiabloIIGymEnv(gym.Env):
         if not self.send_request(f"{self.server_url}/combined_action", combined_action):
             print("Combined action failed")
 
-        
-        # # Extract the discrete actions from the MultiDiscrete space
-        # mouse_x, mouse_y, mouse_click, keypress_index = action
-
-        # # Convert NumPy int64 types to native Python int using .item()
-        # mouse_x_action = int(10 + mouse_x.item())
-        # mouse_y_action = int(30 + mouse_y.item())
-        # mouse_click_action = 'left' if mouse_click.item() == 0 else 'right'
-        
-        # # Handle the action for keypress
-        # keypress_index = action[3]  # This gets the index for the keypress action
-        # keypress_action_key = self.key_mapping[keypress_index]  # This can now be None
-
-        # if keypress_action_key is not None:
-        #     # Perform the key press
-        #     keypress_action = {
-        #         "key": keypress_action_key,
-        #         "action": "press"
-        #     }
-        #     if not self.send_request(f"{self.server_url}/keypress", keypress_action):
-        #         print("Keypress action failed, skipping to the next action")
-
-        # # Now create the JSON payloads with native Python types for mouse actions
-        # mouse_action = {
-        #     "action": "move",
-        #     "x": mouse_x_action,
-        #     "y": mouse_y_action
-        # }
-        # if not self.send_request(f"{self.server_url}/mouse", mouse_action):
-        #     print("Mouse move action failed, skipping to the next action")
-
-        # click_action = {
-        #     "action": "click",
-        #     "button": mouse_click_action
-        # }
-        # if not self.send_request(f"{self.server_url}/mouse", click_action):
-        #     print("Mouse click action failed, skipping to the next action")
-
-
         # Get a screenshot for the observation
         response = requests.get(f"{self.server_url}/screenshot")
         image = Image.open(BytesIO(response.content))

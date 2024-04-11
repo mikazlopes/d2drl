@@ -17,7 +17,7 @@ def main():
     config = embodied.Config(dreamerv3.configs['defaults'])
     config = config.update(dreamerv3.configs['xlarge'])
     config = config.update({
-        'logdir': '/d2rl/logdir/run1',
+        'logdir': '~/Documents/d2rl/logdir/run1',
         'run.train_ratio': 64,
         'run.log_every': 30,  # Seconds
         'batch_size': 16,

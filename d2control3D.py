@@ -40,7 +40,7 @@ def screenshot():
     window = diablo_window[0]
     x, y, width, height = window.left, window.top, window.width, window.height
     screenshot = ImageGrab.grab(bbox=(x, y, x+width, y+height))
-    screenshot = screenshot.resize((400, 300), Image.Resampling.LANCZOS)
+    screenshot = screenshot.resize((200, 150), Image.Resampling.LANCZOS)
     img_byte_arr = io.BytesIO()
     screenshot.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
@@ -61,7 +61,7 @@ def screenshotsmall():
     screenshot = ImageGrab.grab(bbox=bbox)
 
     # Resize image while maintaining aspect ratio
-    target_size = 128
+    target_size = 64
     screenshot.thumbnail((target_size, target_size))
 
     # Calculate padding to get to 128x128

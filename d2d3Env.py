@@ -114,6 +114,7 @@ class DiabloIIGymEnv(gym.Env):
         observation = observation_image
 
         updated_state = self.d2_game_state.get_state() 
+        
         done = updated_state.get('IsDead', False)
         
         reward = self.calculate_reward(new_state=updated_state, old_state=current_state)
