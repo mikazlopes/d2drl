@@ -87,7 +87,7 @@ def train(checkpoint_path=None, device='cpu'):
         model.set_env(env)  # Set the environment for the loaded model
         print(f"Continuing training from checkpoint: {checkpoint_path}")
     else:
-        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device=device, batch_size=512, n_steps=ep_lenght, n_epochs=1, gamma=0.999)
+        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device=device, gamma=0.999)
         print("Starting new training session")
 
     # Train the agent

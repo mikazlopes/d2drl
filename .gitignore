@@ -167,3 +167,5 @@ cython_debug/
 #.idea/
 
 d2_ppo_tensorboard/.DS_Store
+episode_tracker_sb3_cnn.csv
+.DS_Store

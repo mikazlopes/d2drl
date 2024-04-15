@@ -53,6 +53,11 @@ class D2GameState:
             print(new_data)
             self.update_game_state(new_data)
             return jsonify(self.game_state)
+        
+        @self.app.route('/heartbeat', methods=['GET'])
+        def heartbeat():
+            # Simply return a successful response indicating the server is alive
+            return jsonify({"status": "alive"})
 
     def update_game_state(self, new_data):
         # Update the values that are present in new_data
