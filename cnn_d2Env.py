@@ -33,11 +33,11 @@ class DiabloIIGymEnv(gym.Env):
         self.cumulative_reward = 0
         self.steps_since_last_reward = 0
         self.step_counter = 0
+        self.env_id = env_id
 
         # Initialize episode counter from the file if it exists
         self.episode_tracker_file = 'episode_tracker_sb3_cnn.csv'
         self.episode_counter, self.best_cumulative_reward = self.load_episode_data()
-        self.env_id = env_id
 
         # Record break through episodes
         self.video_writer = None
@@ -229,11 +229,12 @@ class DiabloIIGymEnv(gym.Env):
         updated_state = self.d2_game_state.get_state()
 
         if current_state == updated_state:
-            timeout = 0
-            while current_state == updated_state and timeout < 2:
-                updated_state = self.d2_game_state.get_state()
-                timeout += 1
-                time.sleep(0.1)
+            updated_state = self.d2_game_state.get_state()
+            # timeout = 0
+            # while current_state == updated_state and timeout < 2:
+            #     updated_state = self.d2_game_state.get_state()
+            #     timeout += 1
+            #     time.sleep(0.1)
 
         # Check if the hero is dead to decide if the episode should be done
         done = updated_state.get('IsDead', False)
@@ -291,7 +292,7 @@ class DiabloIIGymEnv(gym.Env):
             self.best_cumulative_reward = self.cumulative_reward
             logging.info('Saving Episode Video with new best score: {}'.format(self.best_cumulative_reward))
             self.save_video()
-            self.save_episode_data()  # Save the updated episode counter and best score
+        self.save_episode_data()  # Save the updated episode counter and best score
             
     
     def save_video(self):
@@ -394,7 +395,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Reward for killing monsters
         if new_state.get('KilledMonsters', 0) > old_state.get('KilledMonsters', 0):
-            reward += 200
+            reward += 400
 
         # Reward for gold
         if new_state.get('Gold', 0) > old_state.get('Gold', 0):
@@ -421,8 +422,8 @@ class DiabloIIGymEnv(gym.Env):
             reward -= 500
 
         # Reward for experience gain
-        if new_state.get('Experience', 0) > old_state.get('Experience', 0):
-            reward += 200
+        # if new_state.get('Experience', 0) > old_state.get('Experience', 0):
+        #     reward += 200
 
         # Check for new area discovery
         if new_state.get('NewAreaDiscovered', False):
@@ -622,6 +623,8 @@ class DiabloIIGymEnv(gym.Env):
         # Reset Areas and other variables
 
         self.d2_game_state.game_state['Areas'] = []
+
+        logging.info(f'{self.env_id} starting Episode {self.episode_counter}')
         
         return observation, {}
 

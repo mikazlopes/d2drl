@@ -5,7 +5,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback, CallbackList
 from cnn_d2Env import DiabloIIGymEnv  # Import your custom environment
 
 
@@ -21,14 +21,34 @@ def make_env(ip, game_port, flask_port, env_id, rank, log_dir):
 log_dir = "./logs/"
 os.makedirs(log_dir, exist_ok=True)
 
+def linear_schedule(initial_value):
+    """
+    Linear learning rate schedule.
+    :param initial_value: (float or str) Initial learning rate which is linearly annealed to zero
+    :return: (function) a function that takes the current progress remaining (from 1 to 0) and
+      returns the learning rate as a float
+    """
+    if isinstance(initial_value, str):
+        initial_value = float(initial_value)
+
+    def func(progress_remaining):
+        """
+        Progress will decrease from 1 (beginning) to 0
+        :param progress_remaining: (float)
+        :return: (float) current learning rate
+        """
+        return progress_remaining * initial_value
+
+    return func
+
 # List of server IPs and ports
 servers = [
     #('192.168.150.61', 5001, 8121), #Windows11 1
     #('192.168.150.62', 5002, 8122), #Windows11 2
-    #('192.168.150.63', 5003, 8123), #Windows11 3
-    #('192.168.150.64', 5004, 8124), #Windows11 4
+    #('192.168.150.63', 5003, 8123, 'Win3'), #Windows11 3
+    #('192.168.150.64', 5004, 8124, 'Win4'), #Windows11 4
     #('192.168.150.65', 5005, 8125), #Windows11 5
-    #('192.168.150.66', 5006, 8126), #Windows11 6
+    #('192.168.150.66', 5006, 8126, 'Win6'), #Windows11 6
     #('192.168.150.156', 5000, 8127), #Windows10 7
     #('router.titogang.org', 5008, 8128), #Windows10 8
     ('192.168.150.139', 5009, 8129, 'Asus'), #Asus Bare Metal
@@ -77,17 +97,20 @@ def train(checkpoint_path=None, device='cpu'):
     env = SubprocVecEnv([make_env(ip, game_port, flask_port, env_id, i, log_dir) for i, (ip, game_port, flask_port, env_id) in enumerate(servers)])
     set_random_seed(0)  # Set random seed for reproducibility
 
+    # Learning rate schedule function
+    learning_rate = linear_schedule(3e-4)
+
     callback = SimpleCallback()
     custom_checkpoint_callback = CustomCheckpointCallback(save_freq=500, save_path='./checkpoints/', name_prefix='d2_model')
     ep_lenght = 512 * 8
 
     # Check if a checkpoint exists and load it; otherwise, start a new model
     if checkpoint_path and os.path.exists(checkpoint_path):
-        model = PPO.load(checkpoint_path, env=env, device=device, tensorboard_log="./d2_ppo_tensorboard/")
+        model = PPO.load(checkpoint_path, env=env, device=device, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=learning_rate)
         model.set_env(env)  # Set the environment for the loaded model
         print(f"Continuing training from checkpoint: {checkpoint_path}")
     else:
-        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", device=device, gamma=0.999)
+        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=learning_rate, device=device, gamma=0.999)
         print("Starting new training session")
 
     # Train the agent
