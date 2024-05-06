@@ -169,3 +169,5 @@ cython_debug/
 episode_tracker_sb3_cnn.csv
 .DS_Store
 .DS_Store
+
+logdir/
