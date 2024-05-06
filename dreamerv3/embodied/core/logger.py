@@ -304,20 +304,47 @@ class MLFlowOutput:
       self._mlflow.start_run(run_name=run_name, tags=tags)
 
 
+# def _encode_gif(frames, fps):
+#   from subprocess import Popen, PIPE
+#   h, w, c = frames[0].shape
+#   pxfmt = {1: 'gray', 3: 'rgb24'}[c]
+#   cmd = ' '.join([
+#       'ffmpeg -y -f rawvideo -vcodec rawvideo',
+#       f'-r {fps:.02f} -s {w}x{h} -pix_fmt {pxfmt} -i - -filter_complex',
+#       '[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse',
+#       f'-r {fps:.02f} -f gif -'])
+#   proc = Popen(cmd.split(' '), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+#   for image in frames:
+#     proc.stdin.write(image.tobytes())
+#   out, err = proc.communicate()
+#   if proc.returncode:
+#     raise IOError('\n'.join([' '.join(cmd), err.decode('utf8')]))
+#   del proc
+#   return out
+
 def _encode_gif(frames, fps):
-  from subprocess import Popen, PIPE
-  h, w, c = frames[0].shape
-  pxfmt = {1: 'gray', 3: 'rgb24'}[c]
-  cmd = ' '.join([
-      'ffmpeg -y -f rawvideo -vcodec rawvideo',
-      f'-r {fps:.02f} -s {w}x{h} -pix_fmt {pxfmt} -i - -filter_complex',
-      '[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse',
-      f'-r {fps:.02f} -f gif -'])
-  proc = Popen(cmd.split(' '), stdin=PIPE, stdout=PIPE, stderr=PIPE)
-  for image in frames:
-    proc.stdin.write(image.tobytes())
-  out, err = proc.communicate()
-  if proc.returncode:
-    raise IOError('\n'.join([' '.join(cmd), err.decode('utf8')]))
-  del proc
-  return out
+    from subprocess import Popen, PIPE
+    h, w, c = frames[0].shape
+    pxfmt = {1: 'gray', 3: 'rgb24'}[c]
+    cmd = [
+        'ffmpeg', '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo',
+        '-r', str(fps), '-s', f'{w}x{h}', '-pix_fmt', pxfmt, '-i', '-', '-filter_complex',
+        '[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse',
+        '-r', str(fps), '-f', 'gif', '-'
+    ]
+    print("Running command:", ' '.join(cmd))
+    proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    try:
+        for image in frames:
+            proc.stdin.write(image.tobytes())
+        out, err = proc.communicate()
+        if proc.returncode:
+            print("FFmpeg failed with stderr:", err.decode('utf8'))
+            raise IOError('FFmpeg error')
+        return out
+    finally:
+        proc.stdin.close()
+        proc.stderr.close()
+        proc.stdout.close()
+        if proc.returncode and not out:
+            print("FFmpeg command failed:", err.decode('utf8'))

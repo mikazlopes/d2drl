@@ -7,7 +7,8 @@ from d2d3Env import DiabloIIGymEnv  # Import your custom environment
 from dreamerv3.embodied.envs.from_gym import FromGym, CompatibleActionSpaceWrapper  # Import the necessary classes
 from gym.wrappers import ResizeObservation
 import cv2
-
+import os
+print(os.getenv("PATH"))
     
 warnings.filterwarnings('ignore', '.*truncated to dtype int32.*')
 
@@ -15,9 +16,9 @@ def main():
 
     # Configure DreamerV3
     config = embodied.Config(dreamerv3.configs['defaults'])
-    config = config.update(dreamerv3.configs['xlarge'])
+    config = config.update(dreamerv3.configs['medium'])
     config = config.update({
-        'logdir': '~/Documents/d2rl/logdir/run1',
+        'logdir': '~/Documents/d2drl/logdir/run1',
         'run.train_ratio': 64,
         'run.log_every': 30,  # Seconds
         'batch_size': 16,
@@ -41,7 +42,7 @@ def main():
 
     # List of server IPs and ports
     servers = [
-        ('192.168.150.214', 5012, 8132),
+        ('192.168.150.148', 5010, 8130),
         ('192.168.150.139', 5009, 8129),
     ]
 

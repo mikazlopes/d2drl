@@ -28,7 +28,7 @@ class DiabloIIGymEnv(gym.Env):
         self.steps_since_last_reward = 0
         self.step_counter = 0
 
-        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', 'Tab', None]
+        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', None]
         self.keyboard_action_space = len(self.key_mapping)
 
         self.action_space = spaces.Box(low=np.array([5, 30, 0, 0], dtype=np.float32), high=np.array([795, 520, 1, self.keyboard_action_space - 1], dtype=np.float32))
