@@ -5,6 +5,7 @@ import json
 import os
 import re
 import time
+import subprocess
 
 import numpy as np
 
@@ -197,7 +198,8 @@ class TensorBoardOutput(AsyncOutput):
         elif len(value.shape) == 3:
           tf.summary.image(name, value, step)
         elif len(value.shape) == 4:
-          self._video_summary(name, value, step)
+          # self._video_summary(name, value, step)
+          pass
       except Exception:
         print('Error writing summary:', name)
         raise
@@ -210,7 +212,7 @@ class TensorBoardOutput(AsyncOutput):
 
   def _video_summary(self, name, video, step):
     import tensorflow as tf
-    import tensorflow.compat.v1 as tf1
+    import tensorflow.compat.v1 as tf1 # type: ignore
     name = name if isinstance(name, str) else name.decode('utf-8')
     if np.issubdtype(video.dtype, np.floating):
       video = np.clip(255 * video, 0, 255).astype(np.uint8)
@@ -224,6 +226,27 @@ class TensorBoardOutput(AsyncOutput):
     except (IOError, OSError) as e:
       print('GIF summaries require ffmpeg in $PATH.', e)
       tf.summary.image(name, video, step)
+
+  # def _video_summary(self, name, video, step):
+  #   import numpy as np
+  #   import tensorflow as tf
+  #   import tensorflow.compat.v1 as tf1 # type: ignore
+  #   name = name if isinstance(name, str) else name.decode('utf-8')
+  #   print("Initializing Video method")
+  #   if np.issubdtype(video.dtype, np.floating):
+  #       video = np.clip(255 * video, 0, 255).astype(np.uint8)
+  #   try:
+  #       T, H, W, C = video.shape
+  #       summary = tf1.Summary()
+  #       image = tf1.Summary.Image(height=H, width=W, colorspace=C)
+  #       print("Starting to Encode")
+  #       image.encoded_image_string = _encode_gif(video, self._fps)
+  #       print("Encoded video")
+  #       summary.value.add(tag=name, image=image)
+  #       tf.summary.experimental.write_raw_pb(summary.SerializeToString(), step)
+  #   except (IOError, OSError) as e:
+  #       print('GIF summaries require ffmpeg in $PATH.', e)
+  #       tf.summary.image(name, video, step)
 
 
 class WandBOutput:
@@ -323,28 +346,32 @@ class MLFlowOutput:
 #   return out
 
 def _encode_gif(frames, fps):
-    from subprocess import Popen, PIPE
+    print("Start the encoding method")
     h, w, c = frames[0].shape
     pxfmt = {1: 'gray', 3: 'rgb24'}[c]
     cmd = [
         'ffmpeg', '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo',
-        '-r', str(fps), '-s', f'{w}x{h}', '-pix_fmt', pxfmt, '-i', '-', '-filter_complex',
-        '[0:v]split[x][z];[z]palettegen[y];[x]fifo[x];[x][y]paletteuse',
-        '-r', str(fps), '-f', 'gif', '-'
+        '-r', str(fps), '-s', f'{w}x{h}', '-pix_fmt', pxfmt, '-i', '-',
+        '-vf', 'fps=10,scale=64:64:flags=lanczos', '-c:v', 'gif', '-f', 'gif', '-'
     ]
     print("Running command:", ' '.join(cmd))
-    proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     try:
+        # Send frames to ffmpeg process
         for image in frames:
             proc.stdin.write(image.tobytes())
-        out, err = proc.communicate()
-        if proc.returncode:
-            print("FFmpeg failed with stderr:", err.decode('utf8'))
-            raise IOError('FFmpeg error')
-        return out
-    finally:
         proc.stdin.close()
-        proc.stderr.close()
-        proc.stdout.close()
-        if proc.returncode and not out:
-            print("FFmpeg command failed:", err.decode('utf8'))
+
+        # Read the output and errors
+        out, err = proc.communicate()
+
+        if proc.returncode == 1:
+            print("ffmpeg processed the video successfully.")
+            return out
+        else:
+            print("FFmpeg failed with errors:", err.decode('utf8'))
+            raise IOError('FFmpeg error')
+    except Exception as e:
+        print(f"Exception occurred while encoding GIF: {e}")
+        raise e

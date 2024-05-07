@@ -7,8 +7,7 @@ from d2d3Env import DiabloIIGymEnv  # Import your custom environment
 from dreamerv3.embodied.envs.from_gym import FromGym, CompatibleActionSpaceWrapper  # Import the necessary classes
 from gym.wrappers import ResizeObservation
 import cv2
-import os
-print(os.getenv("PATH"))
+
     
 warnings.filterwarnings('ignore', '.*truncated to dtype int32.*')
 
@@ -20,7 +19,7 @@ def main():
     config = config.update({
         'logdir': '~/Documents/d2drl/logdir/run1',
         'run.train_ratio': 64,
-        'run.log_every': 30,  # Seconds
+        'run.log_every': 60,  # Seconds
         'batch_size': 16,
         'jax.prealloc': False,
         'encoder.mlp_keys': '$^',
@@ -39,24 +38,29 @@ def main():
         embodied.logger.TensorBoardOutput(logdir),
     ])
  
-
+    ## Multiple envs
     # List of server IPs and ports
-    servers = [
-        ('192.168.150.148', 5010, 8130),
-        ('192.168.150.139', 5009, 8129),
-    ]
+    # servers = [
+    #     ('192.168.150.148', 5010, 8130),
+    #     ('192.168.150.139', 5009, 8129),
+    # ]
 
-    # Wrap each environment instance with FromGym
-    envs = [
-        FromGym(
-            DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
-            obs_key='image'
-        ) for ip, game_port, flask_port in servers
-    ]
+    # # Wrap each environment instance with FromGym
+    # envs = [
+    #     FromGym(
+    #         DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
+    #         obs_key='image'
+    #     ) for ip, game_port, flask_port in servers
+    # ]
     
 
-    # Wrap the batch of environments for DreamerV3
-    env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
+    # # Wrap the batch of environments for DreamerV3
+    # env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
+
+    ###Settings for single env
+    env = FromGym(DiabloIIGymEnv(server_url='http://192.168.150.139:5009', flask_port=8129), obs_key='image')
+    env = dreamerv3.wrap_env(env, config)
+    env = embodied.BatchEnv([env], parallel=False)
 
     agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
     replay = embodied.replay.Uniform(config.batch_length, config.replay_size, logdir / 'replay')

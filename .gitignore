@@ -171,3 +171,4 @@ episode_tracker_sb3_cnn.csv
 .DS_Store
 
 logdir/
+logs/0.monitor.csv
