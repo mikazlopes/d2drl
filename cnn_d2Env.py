@@ -46,8 +46,10 @@ class DiabloIIGymEnv(gym.Env):
         os.makedirs(self.video_directory, exist_ok=True)  # Ensure the directory exists
 
 
-        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', 'Tab', None]
+        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', None]
         self.keyboard_action_space = len(self.key_mapping)
+        self.alt_counter = 0
+        self.alt_pressed = False
 
         # Check if windows are open
         self.inventory_open = False
@@ -55,7 +57,7 @@ class DiabloIIGymEnv(gym.Env):
         self.skill_tree_open = False
 
         # Now the action space for the keypress_index has to be one more than the length of self.key_mapping
-        self.action_space = spaces.MultiDiscrete([791, 510, 2, len(self.key_mapping)])
+        self.action_space = spaces.MultiDiscrete([791, 510, 3, len(self.key_mapping)])
 
         self.observation_width = 200
         self.observation_height = 150
@@ -164,7 +166,12 @@ class DiabloIIGymEnv(gym.Env):
         # Convert NumPy int64 types to native Python int using .item()
         mouse_x_action = int(10 + mouse_x.item())
         mouse_y_action = int(30 + mouse_y.item())
-        mouse_click_action = 'left' if mouse_click.item() == 0 else 'right'
+        if mouse_click.item() == 0:
+            mouse_click_action = 'left'
+        elif mouse_click.item() == 1:
+            mouse_click_action = 'right'
+        elif mouse_click.item() == 2:
+            mouse_click_action = 'none'
 
         # Prepare the combined action
         combined_action = {
@@ -203,9 +210,23 @@ class DiabloIIGymEnv(gym.Env):
             self.skill_tree_open = False
 
         if keypress_action_key is not None:
-            combined_action['keypress_action'] = {
-                "key": keypress_action_key
-            }
+            if keypress_action_key != 'Alt':
+                combined_action['keypress_action'] = {
+                    "key": keypress_action_key
+                }
+            else:
+                # Logic for keeping Alt pressed for at least 3 steps
+                if self.alt_pressed:
+                    self.alt_counter = 0
+                self.alt_pressed = True
+                self.alt_counter += 1
+                combined_action['keypress_action'] = {
+                    "key": keypress_action_key,
+                    "alt_counter": self.alt_counter,
+                }
+                if self.alt_counter == 3:
+                    self.alt_counter = 0
+                    self.alt_pressed = False
 
         # Send the combined request
         if not self.send_request(f"{self.server_url}/combined_action", combined_action):
@@ -355,10 +376,10 @@ class DiabloIIGymEnv(gym.Env):
         #Check for open screens
 
         if self.char_open:
-            reward -= 0.1
+            reward -= 1
         
         if self.inventory_open or self.skill_tree_open:
-            reward -= 0.1
+            reward -= 1
 
         # Calculate reward based on the change of attributes
         attribute_rewards = {
@@ -485,10 +506,10 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(550, 325)
+        self.send_mouse_move(622, 325)
         self.send_mouse_click('left')
-        self.send_keypress('a')
-        self.send_keypress('b')
+        self.send_keypress('d')
+        self.send_keypress('d')
         self.send_keypress('Enter')
         time.sleep(2)
 
@@ -560,10 +581,10 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(550, 325)
+        self.send_mouse_move(622, 325)
         self.send_mouse_click('left')
-        self.send_keypress('a')
-        self.send_keypress('b')
+        self.send_keypress('n')
+        self.send_keypress('r')
         self.send_keypress('Enter')
         time.sleep(2)
 
@@ -586,14 +607,17 @@ class DiabloIIGymEnv(gym.Env):
             # Perform actions for the very first reset
             self.send_mouse_move(400, 325)
             self.send_mouse_click('left')
-            self.send_mouse_move(550, 325)
+            self.send_mouse_move(622, 325)
             self.send_mouse_click('left')
-            self.send_keypress('a')
-            self.send_keypress('b')
+            self.send_keypress('n')
+            self.send_keypress('c')
             self.send_keypress('Enter')
             time.sleep(4)
             # Set the flag indicating that initial reset actions have been performed
             self.initial_reset_done = True
+
+        # Reset Alt
+        self.alt_pressed = False
 
         # Check for the custom reset condition
         if self.steps_since_last_reward >= self.MAX_STEPS_NO_REWARD:
