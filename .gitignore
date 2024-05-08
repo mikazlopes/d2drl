@@ -173,3 +173,4 @@ episode_tracker_sb3_cnn.csv
 logdir/
 logs/0.monitor.csv
 onstart.sh
+d2_ppo_model.zip
