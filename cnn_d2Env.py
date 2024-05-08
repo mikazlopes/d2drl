@@ -210,23 +210,29 @@ class DiabloIIGymEnv(gym.Env):
             self.skill_tree_open = False
 
         if keypress_action_key is not None:
-            if keypress_action_key != 'Alt':
-                combined_action['keypress_action'] = {
-                    "key": keypress_action_key
-                }
-            else:
-                # Logic for keeping Alt pressed for at least 3 steps
-                if self.alt_pressed:
-                    self.alt_counter = 0
-                self.alt_pressed = True
-                self.alt_counter += 1
+
+            if self.alt_pressed:
+                    self.alt_counter += 1
+
+            if keypress_action_key != 'Alt': 
+
                 combined_action['keypress_action'] = {
                     "key": keypress_action_key,
                     "alt_counter": self.alt_counter,
                 }
-                if self.alt_counter == 3:
-                    self.alt_counter = 0
-                    self.alt_pressed = False
+            else:
+                # Logic for keeping Alt pressed for at least 3 steps
+                if self.alt_pressed:
+                    self.alt_counter = 1
+                self.alt_pressed = True
+                combined_action['keypress_action'] = {
+                    "key": keypress_action_key,
+                    "alt_counter": self.alt_counter,
+                }
+                
+            if self.alt_counter >= 3:
+                self.alt_counter = 0
+                self.alt_pressed = False
 
         # Send the combined request
         if not self.send_request(f"{self.server_url}/combined_action", combined_action):
@@ -296,7 +302,7 @@ class DiabloIIGymEnv(gym.Env):
         if self.char_open and (self.inventory_open or self.skill_tree_open):
             logging.info(f'Env ID: {self.env_id}, Char Screen: {self.char_open}, Inventory Scren: {self.inventory_open}, Skill Screen: {self.skill_tree_open}')
 
-        logging.info(f"Step: {self.steps_since_last_reward}, Env ID: {self.env_id}, Action: {action}, Reward: {reward:.2f}, Sum Reward: {self.cumulative_reward:.2f}, Done: {done}")
+        logging.info(f"Step: {self.steps_since_last_reward}, Env ID: {self.env_id}, Action: {action}, Reward: {reward:.2f}, Sum Reward: {self.cumulative_reward:.2f}, Alt: {self.alt_pressed}, Done: {done}")
 
         if done:
             self.episode_counter += 1
@@ -506,7 +512,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(622, 325)
+        self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
         self.send_keypress('d')
         self.send_keypress('d')
@@ -581,7 +587,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(622, 325)
+        self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
         self.send_keypress('n')
         self.send_keypress('r')
@@ -607,7 +613,7 @@ class DiabloIIGymEnv(gym.Env):
             # Perform actions for the very first reset
             self.send_mouse_move(400, 325)
             self.send_mouse_click('left')
-            self.send_mouse_move(622, 325)
+            self.send_mouse_move(550, 325)
             self.send_mouse_click('left')
             self.send_keypress('n')
             self.send_keypress('c')
@@ -618,6 +624,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Reset Alt
         self.alt_pressed = False
+        self.alt_counter = 0
 
         # Check for the custom reset condition
         if self.steps_since_last_reward >= self.MAX_STEPS_NO_REWARD:

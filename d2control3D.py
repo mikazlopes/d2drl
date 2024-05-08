@@ -128,12 +128,14 @@ def combined_action():
     keypress_data = data.get('keypress_action')
     if keypress_data and keypress_data['key'] is not None:
         key = keypress_data['key']
+        alt_counter = keypress_data['alt_counter']
         pyautogui.keyDown(key)
         if key != 'Alt':
             time.sleep(0.05)  # Replace asyncio.sleep with time.sleep
             pyautogui.keyUp(key)
+            if alt_counter >= 3:
+                pyautogui.keyUp('Alt')
         else:
-            alt_counter = keypress_data['alt_counter']
             pyautogui.keyUp(key) if alt_counter >= 3 else pyautogui.keyDown(key)
             
     return jsonify(success=True), 200
