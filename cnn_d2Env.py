@@ -229,7 +229,7 @@ class DiabloIIGymEnv(gym.Env):
                     "key": keypress_action_key,
                     "alt_counter": self.alt_counter,
                 }
-                
+
             if self.alt_counter >= 3:
                 self.alt_counter = 0
                 self.alt_pressed = False
@@ -382,10 +382,10 @@ class DiabloIIGymEnv(gym.Env):
         #Check for open screens
 
         if self.char_open:
-            reward -= 1
+            reward -= 0.5
         
         if self.inventory_open or self.skill_tree_open:
-            reward -= 1
+            reward -= 0.5
 
         # Calculate reward based on the change of attributes
         attribute_rewards = {
@@ -512,7 +512,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(550, 325)
+        self.send_mouse_move(622, 325)
         self.send_mouse_click('left')
         self.send_keypress('d')
         self.send_keypress('d')
@@ -587,7 +587,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(550, 325)
+        self.send_mouse_move(622, 325)
         self.send_mouse_click('left')
         self.send_keypress('n')
         self.send_keypress('r')
@@ -613,10 +613,10 @@ class DiabloIIGymEnv(gym.Env):
             # Perform actions for the very first reset
             self.send_mouse_move(400, 325)
             self.send_mouse_click('left')
-            self.send_mouse_move(550, 325)
+            self.send_mouse_move(622, 325)
             self.send_mouse_click('left')
-            self.send_keypress('n')
-            self.send_keypress('c')
+            self.send_keypress('i')
+            self.send_keypress('r')
             self.send_keypress('Enter')
             time.sleep(4)
             # Set the flag indicating that initial reset actions have been performed

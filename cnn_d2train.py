@@ -102,7 +102,8 @@ def train(checkpoint_path=None, device='cpu'):
 
     callback = SimpleCallback()
     custom_checkpoint_callback = CustomCheckpointCallback(save_freq=500, save_path='./checkpoints/', name_prefix='d2_model')
-    ep_lenght = 1024 * 8
+    ep_lenght = 1024 * 2
+    batch_size = ep_lenght / 2
 
     # Check if a checkpoint exists and load it; otherwise, start a new model
     if checkpoint_path and os.path.exists(checkpoint_path):
@@ -114,7 +115,7 @@ def train(checkpoint_path=None, device='cpu'):
         model.set_env(env)  # Set the environment for the loaded model
         print(f"Continuing training from checkpoint: {checkpoint_path}")
     else:
-        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=2.87e-4, device=device, gamma=0.999, batch_size=512, n_steps=ep_lenght, n_epochs=1)
+        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=2.87e-4, device=device, gamma=0.999, batch_size=batch_size, n_steps=ep_lenght, n_epochs=6)
         print("Starting new training session")
 
     # Train the agent

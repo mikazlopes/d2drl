@@ -144,7 +144,7 @@ def combined_action():
 async def keypress():
     if not focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
-
+    pyautogui.keyUp('Alt')
     data = request.get_json()
     key = data['key']
     pyautogui.keyDown(key)
