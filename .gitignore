@@ -172,3 +172,4 @@ episode_tracker_sb3_cnn.csv
 
 logdir/
 logs/0.monitor.csv
+onstart.sh
