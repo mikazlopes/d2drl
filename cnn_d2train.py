@@ -102,8 +102,8 @@ def train(checkpoint_path=None, device='cpu'):
 
     callback = SimpleCallback()
     custom_checkpoint_callback = CustomCheckpointCallback(save_freq=500, save_path='./checkpoints/', name_prefix='d2_model')
-    ep_lenght = 1024 * 2
-    batch_size = ep_lenght / 2
+    ep_lenght = int(1024 * 2)
+    batch_size = int(ep_lenght / 2)
 
     # Check if a checkpoint exists and load it; otherwise, start a new model
     if checkpoint_path and os.path.exists(checkpoint_path):
