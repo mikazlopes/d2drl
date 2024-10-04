@@ -54,7 +54,7 @@ servers = [
     ('192.168.150.139', 5009, 8129, 'Asus'), #Asus Bare Metal
     ('192.168.150.148', 5010, 8130, 'Surface'), #Surface
     #('router.titogang.org', 5011, 8131), #Windows10 11
-    ('192.168.150.214', 5012, 8132, 'MacIntel'), #Mac Intel Bare Metal
+    #('192.168.150.214', 5012, 8132, 'MacIntel'), #Mac Intel Bare Metal
     # Add more server IPs, game ports, and flask ports as needed
 ]
 
@@ -107,7 +107,7 @@ def train(checkpoint_path=None, device='cpu'):
 
     # Check if a checkpoint exists and load it; otherwise, start a new model
     if checkpoint_path and os.path.exists(checkpoint_path):
-        model = PPO.load(checkpoint_path, env=env, device=device, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=2.87e-4)
+        model = PPO.load(checkpoint_path, env=env, device=device, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=linear_schedule(3e-4))
         model.n_steps = ep_lenght
         model.rollout_buffer.buffer_size = ep_lenght
         model.rollout_buffer.n_envs = len(servers)
@@ -115,12 +115,12 @@ def train(checkpoint_path=None, device='cpu'):
         model.set_env(env)  # Set the environment for the loaded model
         print(f"Continuing training from checkpoint: {checkpoint_path}")
     else:
-        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=2.87e-4, device=device, gamma=0.999, batch_size=batch_size, n_steps=ep_lenght, n_epochs=6)
+        model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./d2_ppo_tensorboard/", learning_rate=linear_schedule(3e-4), device=device, gamma=0.999, batch_size=batch_size, n_steps=ep_lenght, n_epochs=6)
         print("Starting new training session")
 
     # Train the agent
     try:
-        model.learn(total_timesteps=int(1e8), callback=[callback, custom_checkpoint_callback], reset_num_timesteps=not checkpoint_path)
+        model.learn(total_timesteps=int(5e8), callback=[callback, custom_checkpoint_callback], reset_num_timesteps=not checkpoint_path)
     except Exception as e:
         print(f"An error occurred during training: {e}")
         traceback.print_exc()  # This will print the full traceback

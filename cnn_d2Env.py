@@ -61,7 +61,7 @@ class DiabloIIGymEnv(gym.Env):
 
         self.observation_width = 200
         self.observation_height = 150
-        self.number_frames = 4
+        self.number_frames = 8
         self.frame_stack = deque(maxlen=self.number_frames)
 
         self.observation_space = spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3 * self.number_frames), dtype=np.uint8)
@@ -275,7 +275,7 @@ class DiabloIIGymEnv(gym.Env):
             self.steps_since_last_reward = 0
         
         PENALTY = -100  # Define the penalty value
-        PENALTY_FREQUENCY = 200  # Apply the penalty every 100 steps
+        PENALTY_FREQUENCY = 300  # Apply the penalty every 100 steps
 
         if self.steps_since_last_reward > 0 and self.steps_since_last_reward % PENALTY_FREQUENCY == 0:
             reward += PENALTY  # Notice that we add because reward is typically a negative value
@@ -286,6 +286,7 @@ class DiabloIIGymEnv(gym.Env):
         # Check if the reset is needed based on the custom logic
         if self.steps_since_last_reward >= self.MAX_STEPS_NO_REWARD:
             done = True
+            reward -= 5000
             # You can also include any additional logic here if needed before the reset
         else:
             done = updated_state.get('IsDead', False)
@@ -421,8 +422,8 @@ class DiabloIIGymEnv(gym.Env):
             reward -= 10
 
         # Reward for killing monsters
-        if new_state.get('KilledMonsters', 0) > old_state.get('KilledMonsters', 0):
-            reward += 400
+        # if new_state.get('KilledMonsters', 0) > old_state.get('KilledMonsters', 0):
+        #     reward += 100
 
         # Reward for gold
         if new_state.get('Gold', 0) > old_state.get('Gold', 0):
@@ -442,15 +443,15 @@ class DiabloIIGymEnv(gym.Env):
 
         # Reward for level up
         if new_state.get('Level', 0) > old_state.get('Level', 0):
-            reward += 500
+            reward += 1000
 
         # Penalty for death
         if new_state.get('IsDead', False):
             reward -= 500
 
         # Reward for experience gain
-        # if new_state.get('Experience', 0) > old_state.get('Experience', 0):
-        #     reward += 200
+        if new_state.get('Experience', 0) > old_state.get('Experience', 0):
+            reward += 200
 
         # Check for new area discovery
         if new_state.get('NewAreaDiscovered', False):
@@ -458,21 +459,21 @@ class DiabloIIGymEnv(gym.Env):
             self.d2_game_state.game_state['NewAreaDiscovered'] = False
 
         # Quest completion rewards
-        new_quests = new_state['CompletedQuests']
-        old_quests = self.d2_game_state.previous_quests
-        for difficulty in new_quests.keys():
-            new_quests_diff = set(new_quests[difficulty]) - set(old_quests.get(difficulty, []))
-            if difficulty == 'Normal':
-                reward += 50000 * len(new_quests_diff)
-            elif difficulty == 'Nightmare':
-                reward += 70000 * len(new_quests_diff)
-            elif difficulty == 'Hell':
-                reward += 100000 * len(new_quests_diff)
+        # new_quests = new_state['CompletedQuests']
+        # old_quests = self.d2_game_state.previous_quests
+        # for difficulty in new_quests.keys():
+        #     new_quests_diff = set(new_quests[difficulty]) - set(old_quests.get(difficulty, []))
+        #     if difficulty == 'Normal':
+        #         reward += 50000 * len(new_quests_diff)
+        #     elif difficulty == 'Nightmare':
+        #         reward += 70000 * len(new_quests_diff)
+        #     elif difficulty == 'Hell':
+        #         reward += 100000 * len(new_quests_diff)
 
-        # Reward for achieving quest milestones
-        if 'QuestPartsCompleted' in new_state and 'QuestPartsCompleted' in old_state:
-            if new_state['QuestPartsCompleted'] > old_state['QuestPartsCompleted']:
-                reward += 10000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
+        # # Reward for achieving quest milestones
+        # if 'QuestPartsCompleted' in new_state and 'QuestPartsCompleted' in old_state:
+        #     if new_state['QuestPartsCompleted'] > old_state['QuestPartsCompleted']:
+        #         reward += 10000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
         
         # Reward for allocating Skill points
         if 'Skills' in new_state and 'Skills' in old_state:
@@ -512,7 +513,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(622, 325)
+        self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
         self.send_keypress('d')
         self.send_keypress('d')
@@ -587,7 +588,7 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(100, 525)
         self.send_mouse_click('left')
-        self.send_mouse_move(622, 325)
+        self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
         self.send_keypress('n')
         self.send_keypress('r')
@@ -613,7 +614,7 @@ class DiabloIIGymEnv(gym.Env):
             # Perform actions for the very first reset
             self.send_mouse_move(400, 325)
             self.send_mouse_click('left')
-            self.send_mouse_move(622, 325)
+            self.send_mouse_move(550, 325)
             self.send_mouse_click('left')
             self.send_keypress('i')
             self.send_keypress('r')
