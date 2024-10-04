@@ -174,3 +174,4 @@ logdir/
 logs/0.monitor.csv
 onstart.sh
 d2_ppo_model.zip
+.DS_Store
