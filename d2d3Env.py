@@ -28,11 +28,13 @@ class DiabloIIGymEnv(gym.Env):
         self.steps_since_last_reward = 0
         self.step_counter = 0
 
-        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', None]
+        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', None]
         self.keyboard_action_space = len(self.key_mapping)
 
         self.action_space = spaces.Box(low=np.array([5, 30, 0, 0], dtype=np.float32), high=np.array([795, 520, 1, self.keyboard_action_space - 1], dtype=np.float32))
         self.observation_space = spaces.Box(low=0, high=255, shape=(64, 64, 3), dtype=np.uint8)
+        self.alt_pressed = False
+        self.alt_counter = 0
 
         #self.observation = np.zeros(self.observation_space.shape, dtype=self.observation_space)
 
@@ -59,40 +61,33 @@ class DiabloIIGymEnv(gym.Env):
         
         current_state = self.d2_game_state.get_state()
 
-        # Decode mouse actions from the action vector
-        mouse_x, mouse_y, mouse_click_continuous, keyboard_action_encoded = action
+        mouse_x, mouse_y, mouse_click, key_index = action
+        mouse_click = 'left' if mouse_click > 0.5 else 'none'  # Simplified mouse click logic
+        keypress_action_key = self.key_mapping[int(key_index)]
 
-        # Convert mouse_click from continuous back to binary
-        mouse_click_action = 'left' if mouse_click_continuous > 0.5 else 'right'
-
-        # Decode the keyboard action, ensuring it's within the valid range
-        keyboard_action = int(np.round(keyboard_action_encoded))
-        keypress_action_key = None
-        if 0 <= keyboard_action < len(self.key_mapping):
-            keypress_action_key = self.key_mapping[keyboard_action]
-
-        # Prepare the combined mouse action
-        combined_mouse_action = {
-            "x": int(mouse_x),
-            "y": int(mouse_y),
+        # Prepare action data
+        action_data = {
+            'mouse_move_action': {'x': int(mouse_x), 'y': int(mouse_y)},
+            'mouse_click_action': {'button': mouse_click},
+            'keypress_action': {'key': keypress_action_key, 'alt_counter': self.alt_counter}
         }
 
-        # Prepare the mouse click action separately
-        mouse_click_action_dict = {
-            "button": mouse_click_action
-        }
-
-        # Prepare the combined action dictionary
-        combined_action = {
-            "mouse_move_action": combined_mouse_action,
-            "mouse_click_action": mouse_click_action_dict  # Now sending mouse click action separately
-        }
-
-        if keypress_action_key:
-            combined_action['keypress_action'] = {"key": keypress_action_key}
+        # Handle Alt key logic
+        if keypress_action_key == 'Alt':
+            if not self.alt_pressed:
+                self.alt_pressed = True
+                self.alt_counter = 0
+            self.alt_counter += 1
+            if self.alt_counter >= 3:
+                self.alt_pressed = False
+                self.alt_counter = 0
+        else:
+            self.alt_pressed = False
+            self.alt_counter = 0
 
         # Send the combined request
-        if not self.send_request(f"{self.server_url}/combined_action", combined_action):
+        success = self.send_request(f"{self.server_url}/combined_action", action_data)
+        if not success:
             print("Combined action failed")
 
         # Get a screenshot for the observation
