@@ -39,7 +39,7 @@ class DiabloIIGymEnv(gym.Env):
         # Example observation space, which will be an image buffer mixed with data
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(300, 400, 3), dtype=np.uint8),
-            "vector": spaces.Box(low=-np.inf, high=np.inf, shape=(25,), dtype=np.float32)  # Example shape (10,)
+            "vector": spaces.Box(low=-np.inf, high=np.inf, shape=(26,), dtype=np.float32)  # Example shape (10,)
         })
 
         # Flask server URL
@@ -176,6 +176,7 @@ class DiabloIIGymEnv(gym.Env):
             updated_state.get('DamageMax', 0),
             updated_state.get('Defense', 0),
             updated_state.get('AttackRating', 0),
+            updated_state.get('QuestPartsCompleted', 0)
         ])
 
         observation = {
@@ -250,10 +251,10 @@ class DiabloIIGymEnv(gym.Env):
 
         # Calculate reward based on the change of attributes
         attribute_rewards = {
-            'Strength': 5,
+            'Strength': 2,
             'Dexterity': 1,
             'ManaMax': 1,
-            'LifeMax': 2
+            'LifeMax': 3
         }
 
         # Calculate potion penalties or rewards
@@ -307,7 +308,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Penalty for death
         if new_state.get('IsDead', False):
-            reward -= 200
+            reward -= 500
 
         # Reward for experience gain
         if new_state.get('Experience', 0) > old_state.get('Experience', 0):
@@ -315,7 +316,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Check for new area discovery
         if new_state.get('NewAreaDiscovered', False):
-            reward += 700  # Assign the new area discovery reward
+            reward += 500  # Assign the new area discovery reward
             self.d2_game_state.game_state['NewAreaDiscovered'] = False
 
         # Quest completion rewards
@@ -324,16 +325,16 @@ class DiabloIIGymEnv(gym.Env):
         for difficulty in new_quests.keys():
             new_quests_diff = set(new_quests[difficulty]) - set(old_quests.get(difficulty, []))
             if difficulty == 'Normal':
-                reward += 5000 * len(new_quests_diff)
+                reward += 50000 * len(new_quests_diff)
             elif difficulty == 'Nightmare':
-                reward += 7000 * len(new_quests_diff)
+                reward += 70000 * len(new_quests_diff)
             elif difficulty == 'Hell':
-                reward += 10000 * len(new_quests_diff)
+                reward += 100000 * len(new_quests_diff)
 
         # Reward for achieving quest milestones
         if 'QuestPartsCompleted' in new_state and 'QuestPartsCompleted' in old_state:
             if new_state['QuestPartsCompleted'] > old_state['QuestPartsCompleted']:
-                reward += 1000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
+                reward += 10000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
 
         return reward
 
@@ -531,6 +532,7 @@ class DiabloIIGymEnv(gym.Env):
             updated_state.get('DamageMax', 0),
             updated_state.get('Defense', 0),
             updated_state.get('AttackRating', 0),
+            updated_state.get('QuestPartsCompleted', 0)
         ])
 
         observation = {

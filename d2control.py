@@ -7,7 +7,7 @@ import win32con
 import time
 import numpy as np
 import io
-from PIL import ImageGrab, Image
+from PIL import ImageGrab, Image, ImageOps
 
 app = Flask(__name__)
 
@@ -45,6 +45,56 @@ async def screenshot():
     screenshot.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
     return Response(img_byte_arr, mimetype='image/png')
+    
+
+@app.route('/screenshotsmall', methods=['GET'])
+async def screenshotsmall():
+    if not await focus_on_diablo_window():
+        return jsonify(error="Diablo II window not found"), 400
+
+    diablo_window = gw.getWindowsWithTitle("Diablo II")
+    if not diablo_window:
+        return jsonify(error="Diablo II window not found"), 400
+    window = diablo_window[0]
+    x, y, width, height = window.left, window.top, window.width, window.height
+
+    # Capture screenshot
+    screenshot = ImageGrab.grab(bbox=(x, y, x+width, y+height))
+
+    # Resize image while maintaining aspect ratio
+    target_size = 128
+    aspect_ratio = width / height
+    if aspect_ratio > 1:
+        # Wide image
+        resized_height = target_size
+        resized_width = int(target_size * aspect_ratio)
+    else:
+        # Tall image
+        resized_width = target_size
+        resized_height = int(target_size / aspect_ratio)
+    resized_screenshot = screenshot.resize((resized_width, resized_height), Image.Resampling.LANCZOS)
+
+
+    # Calculate padding
+    delta_width = target_size - resized_width
+    delta_height = target_size - resized_height
+    padding = (max(0, delta_width // 2), max(0, delta_height // 2),
+               max(0, delta_width - (delta_width // 2)), max(0, delta_height - (delta_height // 2)))
+
+    # Apply padding
+    padded_screenshot = ImageOps.expand(resized_screenshot, padding, fill=(0, 0, 0))
+
+    # Verify size after padding
+    if padded_screenshot.size != (target_size, target_size):
+        return jsonify(error="Error in resizing and padding image"), 500
+
+    # Convert to byte array for response
+    img_byte_arr = io.BytesIO()
+    padded_screenshot.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+
+    return Response(img_byte_arr, mimetype='image/png')
+
 
 @app.route('/screenshotreset', methods=['GET'])
 async def screenshotreset():
