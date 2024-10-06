@@ -16,6 +16,7 @@ def main():
     # Configure DreamerV3
     config = embodied.Config(dreamerv3.configs['defaults'])
     config = config.update(dreamerv3.configs['medium'])
+    config = config.update(dreamerv3.configs['medium'])
     config = config.update({
         'logdir': '~/Documents/d2drl/logdir/run1',
         'run.train_ratio': 64,
@@ -45,6 +46,13 @@ def main():
     #     ('192.168.150.139', 5009, 8129),
     # ]
 
+    # # Wrap each environment instance with FromGym
+    # envs = [
+    #     FromGym(
+    #         DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
+    #         obs_key='image'
+    #     ) for ip, game_port, flask_port in servers
+    # ]
     # # Wrap each environment instance with FromGym
     # envs = [
     #     FromGym(

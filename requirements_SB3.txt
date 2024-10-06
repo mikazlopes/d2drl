@@ -1,0 +1,7 @@
+gymnasium
+requests
+numpy
+Pillow
+opencv-python-headless
+Flask
+stable_baselines3
