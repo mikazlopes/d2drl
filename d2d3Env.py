@@ -65,25 +65,26 @@ class DiabloIIGymEnv(gym.Env):
         mouse_click = 'left' if mouse_click > 0.5 else 'none'  # Simplified mouse click logic
         keypress_action_key = self.key_mapping[int(key_index)]
 
+
+        if self.alt_pressed:
+            self.alt_counter += 1
+
+        # Handle Alt key logic
+        if keypress_action_key == 'Alt':
+            if self.alt_pressed:
+                self.alt_counter = 1
+            self.alt_pressed = True
+
+        if self.alt_counter >= 3:
+            self.alt_counter = 0
+            self.alt_pressed = False
+
         # Prepare action data
         action_data = {
             'mouse_move_action': {'x': int(mouse_x), 'y': int(mouse_y)},
             'mouse_click_action': {'button': mouse_click},
             'keypress_action': {'key': keypress_action_key, 'alt_counter': self.alt_counter}
         }
-
-        # Handle Alt key logic
-        if keypress_action_key == 'Alt':
-            if not self.alt_pressed:
-                self.alt_pressed = True
-                self.alt_counter = 0
-            self.alt_counter += 1
-            if self.alt_counter >= 3:
-                self.alt_pressed = False
-                self.alt_counter = 0
-        else:
-            self.alt_pressed = False
-            self.alt_counter = 0
 
         # Send the combined request
         success = self.send_request(f"{self.server_url}/combined_action", action_data)
