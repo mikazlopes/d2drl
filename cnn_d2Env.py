@@ -1,14 +1,18 @@
 import gymnasium as gym
 from gymnasium import spaces
+from collections import deque
 import requests
+import os
+import csv
+from pathlib import Path
 import time
+from datetime import datetime
 import numpy as np
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 import cv2
 import logging
 import random
-import math
 from d2stream import D2GameState  # Import the class from d2stream.py
 
 # Setup logging at the start of your script
@@ -21,7 +25,7 @@ class DiabloIIGymEnv(gym.Env):
     MAX_STEPS_NO_REWARD = 1000  # Max steps without a reward before resetting
 
 
-    def __init__(self, server_url, flask_port):
+    def __init__(self, server_url, flask_port, env_id='main'):
         super(DiabloIIGymEnv, self).__init__()
         
         self.d2_game_state = D2GameState(flask_port)
@@ -29,21 +33,107 @@ class DiabloIIGymEnv(gym.Env):
         self.cumulative_reward = 0
         self.steps_since_last_reward = 0
         self.step_counter = 0
+        self.env_id = env_id
 
-        # Add a None value to represent no keystroke
-        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', 'Tab', None]
+        # Initialize episode counter from the file if it exists
+        self.episode_tracker_file = 'episode_tracker_sb3_cnn.csv'
+        self.episode_counter, self.best_cumulative_reward = self.load_episode_data()
+
+        # Record break through episodes
+        self.video_writer = None
+        self.video_buffer = []
+        self.video_directory = "./videos/"  # Specify your directory here
+        os.makedirs(self.video_directory, exist_ok=True)  # Ensure the directory exists
+
+
+        self.key_mapping = ['a', 't', 's', 'i', '1', '2', '3', '4', 'r', 'Alt', None]
+        self.keyboard_action_space = len(self.key_mapping)
+        self.alt_counter = 0
+        self.alt_pressed = False
+
+        # Check if windows are open
+        self.inventory_open = False
+        self.char_open = False
+        self.skill_tree_open = False
 
         # Now the action space for the keypress_index has to be one more than the length of self.key_mapping
-        self.action_space = spaces.MultiDiscrete([791, 510, 2, len(self.key_mapping)])
+        self.action_space = spaces.MultiDiscrete([791, 510, 3, len(self.key_mapping)])
 
-        # Example observation space, which will be an image buffer mixed with data
-        self.observation_space = spaces.Dict({
-            "image": spaces.Box(low=0, high=255, shape=(300, 400, 3), dtype=np.uint8),
-            "vector": spaces.Box(low=-np.inf, high=np.inf, shape=(26,), dtype=np.float32)  # Example shape (10,)
-        })
+        self.observation_width = 200
+        self.observation_height = 150
+        self.number_frames = 8
+        self.frame_stack = deque(maxlen=self.number_frames)
+
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3 * self.number_frames), dtype=np.uint8)
 
         # Flask server URL
         self.server_url = server_url
+
+    def load_episode_data(self):
+        episode_counter = 0
+        best_cumulative_reward = -float('inf')
+        if Path(self.episode_tracker_file).is_file():
+            with open(self.episode_tracker_file, mode='r') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    if row['env_id'] == self.env_id:
+                        episode_counter = int(row['episode_number'])
+                        best_cumulative_reward = float(row.get('best_score', -float('inf')))
+                        break
+        return episode_counter, best_cumulative_reward
+
+    def save_episode_data(self):
+        # Load existing data
+        data = []
+        if Path(self.episode_tracker_file).is_file():
+            with open(self.episode_tracker_file, mode='r') as file:
+                data = list(csv.DictReader(file))
+
+        # Update or add the episode counter and best score for the current env_id
+        updated = False
+        for row in data:
+            if row['env_id'] == self.env_id:
+                row['episode_number'] = str(self.episode_counter)
+                row['best_score'] = str(self.best_cumulative_reward)
+                updated = True
+                break
+        if not updated:
+            data.append({
+                'env_id': self.env_id, 
+                'episode_number': str(self.episode_counter),
+                'best_score': str(self.best_cumulative_reward)
+            })
+
+        # Write updated data back to the file
+        with open(self.episode_tracker_file, mode='w', newline='') as file:
+            fieldnames = ['env_id', 'episode_number', 'best_score']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(data)
+
+    
+    def process_image_for_observation(self, pil_image, method='step'):
+            
+            final_image = pil_image.resize((self.observation_width, self.observation_height), Image.Resampling.LANCZOS)
+
+            # Convert the PIL Image to a NumPy array
+            np_image = np.array(final_image)
+
+            # Ensure the observation is of type uint8
+            np_image = np.clip(np_image, 0, 255).astype(np.uint8)
+
+            # Ensure the observation matches the expected shape 
+            assert np_image.shape == (self.observation_height, self.observation_width, 3), "Observation shape mismatch"
+
+            if method == 'reset':
+                for _ in range(self.number_frames):
+                    self.frame_stack.append(np_image)
+            else:
+                self.frame_stack.append(np_image)
+
+            stacked_obs = np.concatenate(list(self.frame_stack), axis=-1)
+            
+            return stacked_obs
     
     def send_request(self, url, data, max_retries=3):
         for attempt in range(max_retries):
@@ -70,10 +160,18 @@ class DiabloIIGymEnv(gym.Env):
         # Extract the discrete actions from the MultiDiscrete space
         mouse_x, mouse_y, mouse_click, keypress_index = action
 
+        # ensure X pos is centered
+        mouse_x = mouse_x + 5
+
         # Convert NumPy int64 types to native Python int using .item()
         mouse_x_action = int(10 + mouse_x.item())
         mouse_y_action = int(30 + mouse_y.item())
-        mouse_click_action = 'left' if mouse_click.item() == 0 else 'right'
+        if mouse_click.item() == 0:
+            mouse_click_action = 'left'
+        elif mouse_click.item() == 1:
+            mouse_click_action = 'right'
+        elif mouse_click.item() == 2:
+            mouse_click_action = 'none'
 
         # Prepare the combined action
         combined_action = {
@@ -86,64 +184,84 @@ class DiabloIIGymEnv(gym.Env):
             }
         }
 
-        # Add keypress action if applicable
+        # Add keypress action if applicable and check if screens are open
         keypress_index = action[3]
         keypress_action_key = self.key_mapping[keypress_index]
+        
+        if keypress_action_key == 'a' and self.char_open == False:
+            self.char_open = True
+        elif keypress_action_key == 'a' and self.char_open == True:
+            self.char_open = False
+
+        if keypress_action_key == 't' and self.skill_tree_open == False:
+            self.skill_tree_open = True
+            self.inventory_open = False
+        elif keypress_action_key == 't' and self.skill_tree_open == True:
+            self.skill_tree_open = False
+        elif keypress_action_key == 'i' and self.inventory_open == False:
+            self.skill_tree_open = False
+            self.inventory_open = True
+        elif keypress_action_key == 'i' and self.inventory_open == True:
+            self.inventory_open = False
+
+        if keypress_action_key == 's':
+            self.char_open = False
+            self.inventory_open = False
+            self.skill_tree_open = False
+
         if keypress_action_key is not None:
-            combined_action['keypress_action'] = {
-                "key": keypress_action_key
-            }
+
+            if self.alt_pressed:
+                    self.alt_counter += 1
+
+            if keypress_action_key != 'Alt': 
+
+                combined_action['keypress_action'] = {
+                    "key": keypress_action_key,
+                    "alt_counter": self.alt_counter,
+                }
+            else:
+                # Logic for keeping Alt pressed for at least 3 steps
+                if self.alt_pressed:
+                    self.alt_counter = 1
+                self.alt_pressed = True
+                combined_action['keypress_action'] = {
+                    "key": keypress_action_key,
+                    "alt_counter": self.alt_counter,
+                }
+
+            if self.alt_counter >= 3:
+                self.alt_counter = 0
+                self.alt_pressed = False
 
         # Send the combined request
         if not self.send_request(f"{self.server_url}/combined_action", combined_action):
             print("Combined action failed")
 
+
         # Get a screenshot for the observation
         response = requests.get(f"{self.server_url}/screenshot")
         image = Image.open(BytesIO(response.content))
-        vector_img = np.array(image)
-
-        # Check the observation shape
-        if vector_img.shape != (300, 400, 3):
-            raise ValueError("Step: Observation shape does not match expected dimensions.")
         
+        # Append the original image to the video buffer for video saving
+        self.video_buffer.append(image)
+        # Process the image for the observation
+        observation_image = self.process_image_for_observation(image.copy(), 'step')
+
+        observation = observation_image
+
+        #time.sleep(0.3)
+
         # Get the updated game state after the action
-        updated_state = self.d2_game_state.get_state() 
+        updated_state = self.d2_game_state.get_state()
 
-        # Get the scalar values from the game state
-        vector_obs = np.array([
-            updated_state.get('Life', 0),
-            updated_state.get('LifeMax', 0),
-            updated_state.get('Mana', 0),
-            updated_state.get('ManaMax', 0),
-            updated_state.get('Level', 0),
-            updated_state.get('Experience', 0),
-            updated_state.get('Skills', 0),
-            updated_state.get('Strength', 0),
-            updated_state.get('Dexterity', 0),
-            updated_state.get('KilledMonsters', 0),
-            updated_state.get('FireResist', 0),
-            updated_state.get('ColdResist', 0),
-            updated_state.get('LightningResist', 0),
-            updated_state.get('PoisonResist', 0),
-            updated_state.get('MagicFind', 0),
-            updated_state.get('FasterCastRate', 0),
-            updated_state.get('IncreasedAttackSpeed', 0),
-            updated_state.get('FasterRunWalk', 0),
-            updated_state.get('FasterHitRecovery', 0),
-            updated_state.get('Gold', 0),
-            updated_state.get('GoldStash', 0),
-            updated_state.get('Area', 1),
-            updated_state.get('DamageMax', 0),
-            updated_state.get('Defense', 0),
-            updated_state.get('AttackRating', 0),
-            updated_state.get('QuestPartsCompleted', 0)
-        ])
-
-        observation = {
-        "image": vector_img,  # The image from the screenshot
-        "vector": vector_obs,         # The vector of scalar values
-        }
+        if current_state == updated_state:
+            updated_state = self.d2_game_state.get_state()
+            # timeout = 0
+            # while current_state == updated_state and timeout < 2:
+            #     updated_state = self.d2_game_state.get_state()
+            #     timeout += 1
+            #     time.sleep(0.1)
 
         # Check if the hero is dead to decide if the episode should be done
         done = updated_state.get('IsDead', False)
@@ -156,12 +274,19 @@ class DiabloIIGymEnv(gym.Env):
         else:
             self.steps_since_last_reward = 0
         
-        self.cumulative_reward += reward  # Add the received reward to the cumulative reward
+        PENALTY = -100  # Define the penalty value
+        PENALTY_FREQUENCY = 300  # Apply the penalty every 100 steps
 
+        if self.steps_since_last_reward > 0 and self.steps_since_last_reward % PENALTY_FREQUENCY == 0:
+            reward += PENALTY  # Notice that we add because reward is typically a negative value
+
+        
+        self.cumulative_reward += reward  # Add the received reward to the cumulative reward
 
         # Check if the reset is needed based on the custom logic
         if self.steps_since_last_reward >= self.MAX_STEPS_NO_REWARD:
             done = True
+            reward -= 5000
             # You can also include any additional logic here if needed before the reset
         else:
             done = updated_state.get('IsDead', False)
@@ -175,11 +300,56 @@ class DiabloIIGymEnv(gym.Env):
         info = {}  # Additional info, if any, for debugging purposes
         truncated = False  # This environment does not use truncation
 
-        logging.info(f"Step: {self.steps_since_last_reward}, Action: {action}, Reward: {reward}, Sum Reward: {self.cumulative_reward}, Done: {done}")
+        if self.char_open and (self.inventory_open or self.skill_tree_open):
+            logging.info(f'Env ID: {self.env_id}, Char Screen: {self.char_open}, Inventory Scren: {self.inventory_open}, Skill Screen: {self.skill_tree_open}')
+
+        logging.info(f"Step: {self.steps_since_last_reward}, Env ID: {self.env_id}, Action: {action}, Reward: {reward:.2f}, Sum Reward: {self.cumulative_reward:.2f}, Alt: {self.alt_pressed}, Done: {done}")
+
+        if done:
+            self.episode_counter += 1
+            logging.info(f'Episode {self.episode_counter} Done')
+            self.check_and_save_video()
+            self.video_buffer = []  # Reset the buffer for the next episode
+
+        reward = reward / 1e3 # Reward scaling
 
         return observation, reward, done, truncated, info
     
-    def calculate_potion_penalty_reward(self, new_state, old_state):
+    def check_and_save_video(self):
+        if self.cumulative_reward > self.best_cumulative_reward:
+            self.best_cumulative_reward = self.cumulative_reward
+            logging.info('Saving Episode Video with new best score: {}'.format(self.best_cumulative_reward))
+            self.save_video()
+        self.save_episode_data()  # Save the updated episode counter and best score
+            
+    
+    def save_video(self):
+        current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        video_name = f"{self.video_directory}/episode_{self.episode_counter}_{int(self.cumulative_reward)}_{self.env_id}_{current_datetime}.mp4"
+        
+        # Log the length of the video buffer
+        logging.info(f'Number of frames to save: {len(self.video_buffer)}')
+
+        fourcc = cv2.VideoWriter.fourcc(*'mp4v')  # Use H.264 codec
+        out = cv2.VideoWriter(video_name, fourcc, 5.0, (800, 600), True)
+
+        if not out.isOpened():
+            logging.error('VideoWriter failed to open')
+            return
+
+        try:
+            for pil_image in self.video_buffer:
+                np_frame = np.array(pil_image)  # Ensure the image is RGB
+                bgr_frame = cv2.cvtColor(np_frame, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR
+                out.write(bgr_frame)  # Write the BGR frame to the video
+        except Exception as e:
+            logging.error(f'Failed to write frame: {e}')
+        finally:
+            out.release()
+            logging.info(f'Episode video saved at {video_name}')
+
+    
+    def calculate_potion_penalty_reward(self, new_state):
         reward = 0
         life_max = new_state.get('LifeMax', 0)
         mana_max = new_state.get('ManaMax', 0)
@@ -196,30 +366,38 @@ class DiabloIIGymEnv(gym.Env):
                     reward -= 5
                 elif current_life <= life_max * 0.5:
                     logging.info(f"Potion reward applied: +2 (Life: {current_life}, LifeMax: {life_max})")
-                    reward += 10
+                    reward += 20
             elif 'Mana Potion' in item_base_name:
                 if current_mana == mana_max:
                     logging.info(f"Potion penalty applied: -2 (Mana: {current_mana}, ManaMax: {mana_max})")
                     reward -= 5
                 elif current_mana <= mana_max * 0.5:
                     logging.info(f"Potion reward applied: +2 (Mana: {current_mana}, ManaMax: {mana_max})")
-                    reward += 10
+                    reward += 20
 
         return reward
 
     def calculate_reward(self, new_state, old_state):
         reward = 0
 
+        #Check for open screens
+
+        if self.char_open:
+            reward -= 0.5
+        
+        if self.inventory_open or self.skill_tree_open:
+            reward -= 0.5
+
         # Calculate reward based on the change of attributes
         attribute_rewards = {
-            'Strength': 2,
-            'Dexterity': 1,
+            'Strength': 5,
+            'Dexterity': 3,
             'ManaMax': 1,
-            'LifeMax': 3
+            'LifeMax': 8
         }
 
         # Calculate potion penalties or rewards
-        potion_reward = self.calculate_potion_penalty_reward(new_state, old_state)
+        potion_reward = self.calculate_potion_penalty_reward(new_state)
         reward += potion_reward
 
         # Attribute-based rewards
@@ -230,7 +408,7 @@ class DiabloIIGymEnv(gym.Env):
         # Reward for life and mana increase
         for attr in ['Life', 'Mana']:
             if new_state.get(attr, 0) > old_state.get(attr, 0):
-                reward += (new_state[attr] - old_state[attr]) * 0.5
+                reward += (new_state[attr] - old_state[attr]) * 0.1
 
         # Reward or penalty for DamageMax and Defense
         if new_state.get('DamageMax', 0) > old_state.get('DamageMax', 0):
@@ -244,14 +422,14 @@ class DiabloIIGymEnv(gym.Env):
             reward -= 10
 
         # Reward for killing monsters
-        if new_state.get('KilledMonsters', 0) > old_state.get('KilledMonsters', 0):
-            reward += 20
+        # if new_state.get('KilledMonsters', 0) > old_state.get('KilledMonsters', 0):
+        #     reward += 100
 
         # Reward for gold
         if new_state.get('Gold', 0) > old_state.get('Gold', 0):
-            reward += 2
-        if new_state.get('GoldStash', 0) > old_state.get('GoldStash', 0):
             reward += 5
+        if new_state.get('GoldStash', 0) > old_state.get('GoldStash', 0):
+            reward += 10
 
         # Reward for fcr, fhr, frw, ias, and mf
         for attr in ['FasterCastRate', 'FasterHitRecovery', 'FasterRunWalk', 'IncreasedAttackSpeed', 'MagicFind']:
@@ -265,7 +443,7 @@ class DiabloIIGymEnv(gym.Env):
 
         # Reward for level up
         if new_state.get('Level', 0) > old_state.get('Level', 0):
-            reward += 100
+            reward += 1000
 
         # Penalty for death
         if new_state.get('IsDead', False):
@@ -273,29 +451,34 @@ class DiabloIIGymEnv(gym.Env):
 
         # Reward for experience gain
         if new_state.get('Experience', 0) > old_state.get('Experience', 0):
-            reward += 20
+            reward += 200
 
         # Check for new area discovery
         if new_state.get('NewAreaDiscovered', False):
-            reward += 500  # Assign the new area discovery reward
+            reward += 800  # Assign the new area discovery reward
             self.d2_game_state.game_state['NewAreaDiscovered'] = False
 
         # Quest completion rewards
-        new_quests = new_state['CompletedQuests']
-        old_quests = self.d2_game_state.previous_quests
-        for difficulty in new_quests.keys():
-            new_quests_diff = set(new_quests[difficulty]) - set(old_quests.get(difficulty, []))
-            if difficulty == 'Normal':
-                reward += 50000 * len(new_quests_diff)
-            elif difficulty == 'Nightmare':
-                reward += 70000 * len(new_quests_diff)
-            elif difficulty == 'Hell':
-                reward += 100000 * len(new_quests_diff)
+        # new_quests = new_state['CompletedQuests']
+        # old_quests = self.d2_game_state.previous_quests
+        # for difficulty in new_quests.keys():
+        #     new_quests_diff = set(new_quests[difficulty]) - set(old_quests.get(difficulty, []))
+        #     if difficulty == 'Normal':
+        #         reward += 50000 * len(new_quests_diff)
+        #     elif difficulty == 'Nightmare':
+        #         reward += 70000 * len(new_quests_diff)
+        #     elif difficulty == 'Hell':
+        #         reward += 100000 * len(new_quests_diff)
 
-        # Reward for achieving quest milestones
-        if 'QuestPartsCompleted' in new_state and 'QuestPartsCompleted' in old_state:
-            if new_state['QuestPartsCompleted'] > old_state['QuestPartsCompleted']:
-                reward += 10000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
+        # # Reward for achieving quest milestones
+        # if 'QuestPartsCompleted' in new_state and 'QuestPartsCompleted' in old_state:
+        #     if new_state['QuestPartsCompleted'] > old_state['QuestPartsCompleted']:
+        #         reward += 10000 * (new_state['QuestPartsCompleted'] - old_state['QuestPartsCompleted'])
+        
+        # Reward for allocating Skill points
+        if 'Skills' in new_state and 'Skills' in old_state:
+            if new_state['Skills'] > old_state['Skills']:
+                reward += 500 * (new_state['Skills'] - old_state['Skills'])
 
         return reward
 
@@ -332,8 +515,8 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
-        self.send_keypress('a')
-        self.send_keypress('b')
+        self.send_keypress('d')
+        self.send_keypress('d')
         self.send_keypress('Enter')
         time.sleep(2)
 
@@ -407,8 +590,8 @@ class DiabloIIGymEnv(gym.Env):
         self.send_mouse_click('left')
         self.send_mouse_move(550, 325)
         self.send_mouse_click('left')
-        self.send_keypress('a')
-        self.send_keypress('b')
+        self.send_keypress('n')
+        self.send_keypress('r')
         self.send_keypress('Enter')
         time.sleep(2)
 
@@ -433,12 +616,16 @@ class DiabloIIGymEnv(gym.Env):
             self.send_mouse_click('left')
             self.send_mouse_move(550, 325)
             self.send_mouse_click('left')
-            self.send_keypress('a')
-            self.send_keypress('b')
+            self.send_keypress('i')
+            self.send_keypress('r')
             self.send_keypress('Enter')
             time.sleep(4)
             # Set the flag indicating that initial reset actions have been performed
             self.initial_reset_done = True
+
+        # Reset Alt
+        self.alt_pressed = False
+        self.alt_counter = 0
 
         # Check for the custom reset condition
         if self.steps_since_last_reward >= self.MAX_STEPS_NO_REWARD:
@@ -451,59 +638,25 @@ class DiabloIIGymEnv(gym.Env):
             self.steps_since_last_reward = 0
         
         # Reset Areas and other variables
-
+        self.skill_tree_open = False
+        self.inventory_open = False
+        self.char_open = False
         self.d2_game_state.game_state['Areas'] = []
 
-       # Get a screenshot for the observation
+         # Get a screenshot for the observation
         response = requests.get(f"{self.server_url}/screenshot")
         image = Image.open(BytesIO(response.content))
-        vector_img = np.array(image)
 
-        # Check the observation shape
-        if vector_img.shape != (300, 400, 3):
-            raise ValueError("Step: Observation shape does not match expected dimensions.")
-        
-        # Get the updated game state after the action
-        updated_state = self.d2_game_state.get_state() 
+        # Process the image for the observation
+        observation_image = self.process_image_for_observation(image.copy(), 'reset')
 
-        # Get the scalar values from the game state
-        vector_obs = np.array([
-            updated_state.get('Life', 0),
-            updated_state.get('LifeMax', 0),
-            updated_state.get('Mana', 0),
-            updated_state.get('ManaMax', 0),
-            updated_state.get('Level', 0),
-            updated_state.get('Experience', 0),
-            updated_state.get('Skills', 0),
-            updated_state.get('Strength', 0),
-            updated_state.get('Dexterity', 0),
-            updated_state.get('KilledMonsters', 0),
-            updated_state.get('FireResist', 0),
-            updated_state.get('ColdResist', 0),
-            updated_state.get('LightningResist', 0),
-            updated_state.get('PoisonResist', 0),
-            updated_state.get('MagicFind', 0),
-            updated_state.get('FasterCastRate', 0),
-            updated_state.get('IncreasedAttackSpeed', 0),
-            updated_state.get('FasterRunWalk', 0),
-            updated_state.get('FasterHitRecovery', 0),
-            updated_state.get('Gold', 0),
-            updated_state.get('GoldStash', 0),
-            updated_state.get('Area', 1),
-            updated_state.get('DamageMax', 0),
-            updated_state.get('Defense', 0),
-            updated_state.get('AttackRating', 0),
-            updated_state.get('QuestPartsCompleted', 0)
-        ])
-
-        observation = {
-        "image": vector_img,  # The image from the screenshot
-        "vector": vector_obs,         # The vector of scalar values
-        }
+        observation = observation_image
 
         # Reset Areas and other variables
 
         self.d2_game_state.game_state['Areas'] = []
+
+        logging.info(f'{self.env_id} starting Episode {self.episode_counter}')
         
         return observation, {}
 

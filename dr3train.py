@@ -16,10 +16,11 @@ def main():
     # Configure DreamerV3
     config = embodied.Config(dreamerv3.configs['defaults'])
     config = config.update(dreamerv3.configs['medium'])
+    config = config.update(dreamerv3.configs['medium'])
     config = config.update({
-        'logdir': '/d2rl/logdir/run1',
+        'logdir': '~/Documents/d2drl/logdir/run1',
         'run.train_ratio': 64,
-        'run.log_every': 30,  # Seconds
+        'run.log_every': 60,  # Seconds
         'batch_size': 16,
         'jax.prealloc': False,
         'encoder.mlp_keys': '$^',
@@ -38,13 +39,20 @@ def main():
         embodied.logger.TensorBoardOutput(logdir),
     ])
  
-    ### Settings for multiple envs
-    # # List of server IPs and ports
+    ## Multiple envs
+    # List of server IPs and ports
     # servers = [
-    #     ('router.titogang.org', 5010, 8130),
-    #     ('router.titogang.org', 5009, 8129),
+    #     ('192.168.150.148', 5010, 8130),
+    #     ('192.168.150.139', 5009, 8129),
     # ]
 
+    # # Wrap each environment instance with FromGym
+    # envs = [
+    #     FromGym(
+    #         DiabloIIGymEnv(server_url=f'http://{ip}:{game_port}', flask_port=flask_port),
+    #         obs_key='image'
+    #     ) for ip, game_port, flask_port in servers
+    # ]
     # # Wrap each environment instance with FromGym
     # envs = [
     #     FromGym(
@@ -58,11 +66,10 @@ def main():
     # env = dreamerv3.wrap_env(embodied.BatchEnv(envs, parallel=True), config)
 
     ###Settings for single env
-    env = FromGym(DiabloIIGymEnv(server_url='http://router.titogang.org:5009', flask_port=8129), obs_key='image')
+    env = FromGym(DiabloIIGymEnv(server_url='http://192.168.150.139:5009', flask_port=8129), obs_key='image')
     env = dreamerv3.wrap_env(env, config)
     env = embodied.BatchEnv([env], parallel=False)
-    
-    
+
     agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
     replay = embodied.replay.Uniform(config.batch_length, config.replay_size, logdir / 'replay')
     args = embodied.Config(**config.run, logdir=config.logdir, batch_steps=config.batch_size * config.batch_length)

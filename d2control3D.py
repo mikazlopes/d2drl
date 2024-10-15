@@ -40,7 +40,7 @@ def screenshot():
     window = diablo_window[0]
     x, y, width, height = window.left, window.top, window.width, window.height
     screenshot = ImageGrab.grab(bbox=(x, y, x+width, y+height))
-    screenshot = screenshot.resize((400, 300), Image.Resampling.LANCZOS)
+    screenshot = screenshot.resize((800, 600), Image.Resampling.LANCZOS)
     img_byte_arr = io.BytesIO()
     screenshot.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
@@ -61,7 +61,7 @@ def screenshotsmall():
     screenshot = ImageGrab.grab(bbox=bbox)
 
     # Resize image while maintaining aspect ratio
-    target_size = 128
+    target_size = 64
     screenshot.thumbnail((target_size, target_size))
 
     # Calculate padding to get to 128x128
@@ -81,7 +81,7 @@ def screenshotsmall():
 
 @app.route('/screenshotreset', methods=['GET'])
 async def screenshotreset():
-    if not await focus_on_diablo_window():
+    if not focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
     diablo_window = gw.getWindowsWithTitle("Diablo II") 
 
@@ -120,25 +120,31 @@ def combined_action():
 
     # Handle mouse click
     mouse_click_data = data.get('mouse_click_action')
-    if mouse_click_data:
+    if mouse_click_data and mouse_click_data['button'] != 'none':
         button = mouse_click_data['button']
         pyautogui.click(button=button)
 
     # Handle key press
     keypress_data = data.get('keypress_action')
-    if keypress_data:
+    if keypress_data and keypress_data['key'] is not None:
         key = keypress_data['key']
+        alt_counter = keypress_data['alt_counter']
         pyautogui.keyDown(key)
-        time.sleep(0.05)  # Replace asyncio.sleep with time.sleep
-        pyautogui.keyUp(key)
-
+        if key != 'Alt':
+            time.sleep(0.05)  # Replace asyncio.sleep with time.sleep
+            pyautogui.keyUp(key)
+            if alt_counter >= 3:
+                pyautogui.keyUp('Alt')
+        else:
+            pyautogui.keyUp(key) if alt_counter >= 3 else pyautogui.keyDown(key)
+            
     return jsonify(success=True), 200
 
 @app.route('/keypress', methods=['POST'])
 async def keypress():
-    if not await focus_on_diablo_window():
+    if not focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
-
+    pyautogui.keyUp('Alt')
     data = request.get_json()
     key = data['key']
     pyautogui.keyDown(key)
@@ -148,7 +154,7 @@ async def keypress():
 
 @app.route('/mouse', methods=['POST'])
 async def mouse():
-    if not await focus_on_diablo_window():
+    if not focus_on_diablo_window():
         return jsonify(error="Diablo II window not found"), 400
 
     data = request.get_json()
