@@ -62,3 +62,6 @@ typing_extensions
 tzdata
 urllib3
 Werkzeug
+optax
+jax
+jax-metal
