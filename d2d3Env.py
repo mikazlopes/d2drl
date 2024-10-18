@@ -75,16 +75,16 @@ class DiabloIIGymEnv(gym.Env):
                 self.alt_counter = 1
             self.alt_pressed = True
 
-        if self.alt_counter >= 3:
-            self.alt_counter = 0
-            self.alt_pressed = False
-
         # Prepare action data
         action_data = {
             'mouse_move_action': {'x': int(mouse_x), 'y': int(mouse_y)},
             'mouse_click_action': {'button': mouse_click},
             'keypress_action': {'key': keypress_action_key, 'alt_counter': self.alt_counter}
         }
+
+        if self.alt_counter >= 3:
+            self.alt_counter = 0
+            self.alt_pressed = False
 
         # Send the combined request
         success = self.send_request(f"{self.server_url}/combined_action", action_data)
