@@ -167,11 +167,12 @@ cython_debug/
 #.idea/
 
 episode_tracker_sb3_cnn.csv
+episode_tracker_dr3_cnn.csv
 .DS_Store
-.DS_Store
-
 logdir/
 logs/0.monitor.csv
 onstart.sh
 d2_ppo_model.zip
 .DS_Store
+videos_dr3/
+
